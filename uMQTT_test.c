@@ -78,7 +78,6 @@ int test_enc_dec_remaining_pkt_len() {
 }
 
 int main() {
- test_enc_dec_remaining_pkt_len();
 
   struct mqtt_packet *pkt = '\0';
 
@@ -87,11 +86,11 @@ int main() {
   init_packet_header(pkt, CONNECT);
 
   printf("Length of new packet = %d\n", pkt->length);
-  //print_pkt_hex(pkt, 10);
+
+  printf("Fixed header:\n");
   print_memory_bytes_hex((void *)pkt->fixed, 1);
-
-
+  printf("Variable header:\n");
+  print_memory_bytes_hex((void *)pkt->variable, 0x0A);
 
   return;
 }
-

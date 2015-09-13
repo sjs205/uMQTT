@@ -24,6 +24,9 @@
  *****************************************************************************/
 #include <stdint.h>
 
+#define MQTT_PROTO_NAME "MQTT"
+#define MQTT_PROTO_LEVEL 0x04
+
 /**
  * \brief Control packet types.
  */
@@ -71,9 +74,18 @@ struct conn_state {
  * \param lenght Length of the string.
  * \param utf8_str Pointer to the actual string data.
  */
-struct utf8_enc_str {
+struct __attribute__((__packed__)) utf8_enc_str {
   uint16_t length;
-  char *utf8_str;
+  char utf8_str;
+};
+
+/**
+ * \brief Struct to store the MQTT configuration.
+ */
+struct mqtt_conf {
+  struct utf8_enc_str *username;
+  struct utf8_enc_str *password;
+  struct utf8_enc_str *topic;
 };
 
 /**
@@ -122,7 +134,7 @@ struct __attribute__((__packed__)) pkt_fixed_header {
 
 /**
  * \brief Struct to store the variable header of a CONNECT control packet.
- * \param pkt_id The packet identifier.
+ * \param name_len The length of the name field.
  * \param proto_name The name of the protocol, "MQTT".
  * \param proto_level The version of the protocol.
  * \param user_flag Flag indicating whether username is present.
@@ -134,7 +146,7 @@ struct __attribute__((__packed__)) pkt_fixed_header {
  * \param keep_alive Number of seconds a session should be kept alive.
  */
 struct __attribute__((__packed__)) connect_variable_header {
-  uint16_t pkt_id                 : 16;
+  uint16_t name_len               : 16;
   uint8_t proto_name[4];
   uint8_t proto_level;
   uint8_t user_flag               : 1;
@@ -181,7 +193,7 @@ struct pkt_variable_header {
     struct connect_variable_header connect;
     struct connack_variable_header connack;
     struct publish_variable_header publish;
-  } var_header;
+  };
 };
 
 /**
@@ -223,6 +235,11 @@ struct raw_packet {
  */
 void init_packet(struct mqtt_packet **pkt_p);
 int init_packet_header(struct mqtt_packet *pkt_p, ctrl_pkt_type type);
+void free_pkt(struct mqtt_packet *pkt);
+void free_pkt_fixed_header(struct pkt_fixed_header *fix);
+void free_pkt_variable_header(struct pkt_variable_header *var);
+void free_pkt_payload(struct pkt_payload *pld);
+
 void encode_remaining_pkt_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_pkt_len(struct mqtt_packet *pkt);
 void print_memory_bytes_hex(void *ptr, int bytes);

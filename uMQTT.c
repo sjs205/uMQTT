@@ -24,6 +24,7 @@
  *****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "uMQTT.h"
 
@@ -36,7 +37,7 @@ void init_packet(struct mqtt_packet **pkt_p) {
 
   if (!(pkt = calloc(1, sizeof(struct mqtt_packet)))) {
     printf("Error: Allocating space for MQTT packet failed.\n");
-    //free_packet
+    free_pkt(pkt);
   }
 
   *pkt_p = pkt;
@@ -60,7 +61,7 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
   fix_len = sizeof(struct pkt_fixed_header);
   if (!(pkt->fixed = calloc(1, fix_len))) {
     printf("Error: Allocating space for fixed header failed.\n");
-    //free_packet
+    free_pkt_fixed_header(pkt->fixed);
   }
 
   //pkt->fixed->ps.reserved = 6;
@@ -70,6 +71,16 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
     case CONNECT:
       /* variable header */
       var_len = sizeof(struct connect_variable_header);
+
+      /* allocate variable header */
+      if (!(pkt->variable = calloc(1, var_len))) {
+        printf("Error: Allocating space for variable header failed.\n");
+        free_pkt_variable_header(pkt->variable);
+      }
+      pkt->variable->connect.name_len = 0x04;
+      memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
+      pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
+
       break;
 
     case PUBLISH:
@@ -80,12 +91,6 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
     default:
       printf("Error: MQTT packet type not currently supported.\n");
       return 0;
-  }
-
-  /* allocate variable header */
-  if (!(pkt->variable = calloc(1, var_len))) {
-    printf("Error: Allocating space for variable header failed.\n");
-    //free_packet
   }
 
   /* debug */
@@ -144,11 +149,11 @@ unsigned int decode_remaining_pkt_len(struct mqtt_packet *pkt) {
   return len;
 }
 
-void free_pkt_fixed_header(struct pkt_fixed_header *fixed) {
-  free(fixed);
-  return;
-}
-  
+/**
+ * \brief Function to print memory in hex.
+ * \param ptr The memory to start printing.
+ * \param bytes The number of bytes to print.
+ */
 void print_memory_bytes_hex(void *ptr, int bytes) {
   int i;
 
@@ -160,3 +165,62 @@ void print_memory_bytes_hex(void *ptr, int bytes) {
   return;
 }
 
+/**
+ * \brief Function to free memory allocated to struct mqtt_packet.
+ * \param pkt The packet to free.
+ */
+void free_pkt(struct mqtt_packet *pkt) {
+  if (pkt) {
+    if (pkt->fixed) {
+      free(pkt->fixed);
+    }
+
+    if (pkt->variable) {
+      free(pkt->variable);
+    }
+
+    if (pkt->payload) {
+      free(pkt->variable);
+    }
+
+    free(pkt);
+  }
+
+  return;
+}
+  
+/**
+ * \brief Function to free memory allocated to struct pkt_fixed_header.
+ * \param fix The fixed header to free.
+ */
+void free_pkt_fixed_header(struct pkt_fixed_header *fix) {
+  if (fix) {
+    free(fix);
+  }
+
+  return;
+}
+
+/**
+ * \brief Function to free memory allocated to struct pkt_variable_header.
+ * \param var The variable header to free.
+ */
+void free_pkt_variable_header(struct pkt_variable_header *var) {
+  if (var) {
+    free(var);
+  }
+
+  return;
+}
+
+/**
+ * \brief Function to free memory allocated to struct pkt_payload.
+ * \param pld The payload to free.
+ */
+void free_pkt_payload(struct pkt_payload *pld) {
+  if (pld) {
+    free(pld);
+  }
+
+  return;
+}
