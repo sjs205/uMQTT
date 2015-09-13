@@ -28,55 +28,133 @@
 #include "uMQTT.h"
 
 /**
- * \brief Function to allocate memory for an mqtt packet, including both fixed and variable
- *        header components.
+ * \brief Function to allocate memory for an mqtt packet.
  * \param pkt Pointer to the address of the new packet.
- * \param type The type of packet to be created.
  */
-void init_packet_header(struct mqtt_packet **pkt_p, ctrl_pkt_type type) {
-
+void init_packet(struct mqtt_packet **pkt_p) {
   struct mqtt_packet *pkt;
-  int len = 0;
 
-  /* fixed header - always the same size */
-  len += sizeof(struct pkt_fixed_header);
-
-  switch (type) {
-    case CONNECT:
-      /* variable header */
-      len += sizeof(struct connect_variable_header);
-
-      /* allocate header memory */
-  if (!(pkt->fixed = calloc(1, sizeof(struct pkt_fixed_header)))) {
-    printf("Error allocating space for fixed header");
-    //free_packet
-  }
-
-  /* allocate variable header */
-  if (!(pkt->variable = calloc(1, sizeof(struct pkt_variable_header)))) {
-    printf("Error allocating space for variable header");
-    //free_packet
-  }
-
-  /* allocate payload struct - NOT data */
-  if (!(pkt->payload = calloc(1, sizeof(struct pkt_payload)))) {
-    printf("Error allocating space for payload");
+  if (!(pkt = calloc(1, sizeof(struct mqtt_packet)))) {
+    printf("Error: Allocating space for MQTT packet failed.\n");
     //free_packet
   }
 
   *pkt_p = pkt;
+
   return;
 }
 
-void free_packet(struct mqtt_packet *pkt) {
+/**
+ * \brief Function to allocate memory for mqtt packet headers
+ *        including both fixed and variable header components.
+ * \param pkt Pointer to the address of the packet containing headers.
+ * \param type The type of packet to be created.
+ * \retrun Length of new packet headers
+ */
+int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
+  unsigned int fix_len = 0;
+  unsigned int var_len = 0;
+
+  /* allocate fixed header memory - always same size*/
+  fix_len = sizeof(struct pkt_fixed_header);
+  if (!(pkt->fixed = calloc(1, fix_len))) {
+    printf("Error: Allocating space for fixed header failed.\n");
+    //free_packet
+  }
+
+  //pkt->fixed->ps.reserved = 6;
+  pkt->fixed->connect.type = type;
+
+  switch (type) {
+    case CONNECT:
+      /* variable header */
+      var_len = sizeof(struct connect_variable_header);
+      break;
+
+    case PUBLISH:
+      /* variable header */
+      var_len = sizeof(struct publish_variable_header);
+      break;
+
+    default:
+      printf("Error: MQTT packet type not currently supported.\n");
+      return 0;
+  }
+
+  /* allocate variable header */
+  if (!(pkt->variable = calloc(1, var_len))) {
+    printf("Error: Allocating space for variable header failed.\n");
+    //free_packet
+  }
+
+  /* debug */
+  printf("Length of fixed packet header: %d\n", fix_len);
+  printf("Length of variable packet header: %d\n", var_len);
+
+  pkt->length = fix_len + var_len;
+
+  encode_remaining_pkt_len(pkt, var_len);
+
+  return pkt->length;
+}
+
+/**
+ * \brief Function to encode the remaining length of an MQTT packet, after the fixed header,
+ *        into the fixed packet header - see section 2.2.3 of the MQTT spec.
+ * \param pkt The packet whose length to encode.
+ * \param len The length that should be encoded.
+ */
+void encode_remaining_pkt_len(struct mqtt_packet *pkt, unsigned int len) {
+  int i = 0;
+  do {
+    pkt->fixed->remain_len[i] = len % 128;
+    len /= 128;
+
+    if (len > 0) {
+      pkt->fixed->remain_len[i] |= 128;
+    }
+    i++;
+  } while (len > 0 && i < 4);
+
+  return;
+}
+
+/**
+ * \brief Function to decode the remain_len variable in the fixed header of an MQTT packet
+ *        into an int - see section 2.2.3 of the MQTT spec.
+ * \param pkt The packet whose length to decode.
+ * \return The length that should be encoded.
+ */
+unsigned int decode_remaining_pkt_len(struct mqtt_packet *pkt) {
+  int i = 0;
+  unsigned int len = 0;
+  unsigned int product = 1;
+  do {
+    len += (pkt->fixed->remain_len[i] & 127) * product;
+
+    if (product > 128*128*128) {
+      printf("Error: Malformed remaining length.\n");
+      return 0;
+    }
+    product *= 128;
+
+  } while ((pkt->fixed->remain_len[i++] & 128) != 0 && i < 4);
+
+  return len;
+}
+
+void free_pkt_fixed_header(struct pkt_fixed_header *fixed) {
+  free(fixed);
+  return;
 }
   
-void print_pkt_hex(struct mqtt_packet *pkt, int pkt_len) {
+void print_memory_bytes_hex(void *ptr, int bytes) {
   int i;
 
-  for (i = 0; i <= pkt_len; i++) {
-    printf("0x0.2%X ", pkt + i);
+  printf("%d bytes starting at address 0x%X\n", (bytes + 1), &ptr);
+  for (i = 0; i <= bytes; i++) {
+    printf("0x%02X ", ((uint8_t *)ptr)[i]);
   }
 
   return;

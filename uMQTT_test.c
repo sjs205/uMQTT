@@ -21,15 +21,77 @@
  * along with uMQTT.  If not, see <http://www.gnu.org/licenses/>.
  *
  *****************************************************************************/
+#include <stdio.h>
 #include "uMQTT.h"
+#define BITS_BIG_ENDIAN 0
 
-int main() {
-  struct mqtt_packet *pkt = '\0';
+int test_encode_remaining_pkt_len(struct mqtt_packet *pkt, int len) {
 
-  init_packet(&pkt);
-  print_pkt_hex(pkt, 10);
+  encode_remaining_pkt_len(pkt, len);
+  printf("The remaining packet length of %d leads to:\n", len);
+  printf("\t%0.2X %0.2X %0.2X %0.2X\n",
+      pkt->fixed->remain_len[0],
+      pkt->fixed->remain_len[1],
+      pkt->fixed->remain_len[2],
+      pkt->fixed->remain_len[3]);
 
   return;
 }
 
+int test_decode_remaining_pkt_len(struct mqtt_packet *pkt, int len) {
+
+  int len_dec = decode_remaining_pkt_len(pkt);
+  printf("The decoded remaining packet length leads to:\n\t%d\n", len_dec);
+  if (len_dec != len) {
+    printf("\tDecode FAILED\n");
+    return 1;
+  }
+
+  return 0;
+}
+
+int test_enc_dec_remaining_pkt_len() {
+
+  int ret = 0;
+  /* rewrite with the above */
+  struct mqtt_packet *pkt = '\0';
+  init_packet(&pkt);
+  init_packet_header(pkt, CONNECT);
+
+  test_encode_remaining_pkt_len(pkt, 0);
+  ret = test_decode_remaining_pkt_len(pkt, 0);
+  test_encode_remaining_pkt_len(pkt, 127);
+  ret = test_decode_remaining_pkt_len(pkt, 127);
+  test_encode_remaining_pkt_len(pkt, 128);
+  ret = test_decode_remaining_pkt_len(pkt, 128);
+  test_encode_remaining_pkt_len(pkt, 16383);
+  ret = test_decode_remaining_pkt_len(pkt, 16383);
+  test_encode_remaining_pkt_len(pkt, 16384);
+  ret = test_decode_remaining_pkt_len(pkt, 16384);
+  test_encode_remaining_pkt_len(pkt, 2097151);
+  ret = test_decode_remaining_pkt_len(pkt, 2097151);
+  test_encode_remaining_pkt_len(pkt, 2097152);
+  ret = test_decode_remaining_pkt_len(pkt, 2097152);
+  test_encode_remaining_pkt_len(pkt, 268435455);
+  ret = test_decode_remaining_pkt_len(pkt, 268435455);
+  return ret;
+}
+
+int main() {
+ test_enc_dec_remaining_pkt_len();
+
+  struct mqtt_packet *pkt = '\0';
+
+  init_packet(&pkt);
+
+  init_packet_header(pkt, CONNECT);
+
+  printf("Length of new packet = %d\n", pkt->length);
+  //print_pkt_hex(pkt, 10);
+  print_memory_bytes_hex((void *)pkt->fixed, 1);
+
+
+
+  return;
+}
 

@@ -43,8 +43,8 @@ typedef enum {
   PINGREQ,
   PINGRESP,
   DISCONNECT,
-  RESERVER_15
-} ctrl_pkt_type;
+  RESERVED_15
+} __attribute__((__packed__)) ctrl_pkt_type;
 
 /**
  * \brief Connect return codes.
@@ -77,34 +77,47 @@ struct utf8_enc_str {
 };
 
 /**
- * \brief Struct to store the PUBLISH flags of a control packet.
+ * \brief Struct to store the fixed header of a CONNECT control packet.
+ * \param type The type of control packet.
+ * \param reserved Reserved for future use - see MQTT spec.
+ */
+struct __attribute__((__packed__)) pkt_connect_fixed_header {
+
+  uint8_t reserved                : 4;
+  ctrl_pkt_type type              : 4;
+};
+
+/**
+ * \brief Struct to store the fixed header of a PUBLISH control packet.
  * \param retain_flag Flag to indicate the application message should be retained.
  * \param qos_flag Quality of service flag.
  * \param dub_flag Flag to indicate whether packet is a duplicate.
+ * \param type The type of control packet.
  */
-struct publish_flags {
+struct __attribute__((__packed__)) pkt_publish_fixed_header {
+
   uint8_t retain_flag             : 1;
   uint8_t qos_flag                : 2;
   uint8_t dup_flag                : 1;
+  ctrl_pkt_type type              : 4;
 };
 
 /**
  * \brief Struct to store the fixed header of a control packet.
- * \param pkt_type The type of control packet.
- * \param pkt_flags The flags associated with the control packet.
- * \param pkt_length The remaining length of the packet not including
+ * \param connect CONNECT fixed header
+ * \param publish PUBLISH fixed header
+ * \param remain_length The remaining length of the packet not including
  *                   the fixed header - note, currently, only 127 bytes
  *                   remaining length supported.
  */
-struct pkt_fixed_header {
-  ctrl_pkt_type type               : 4;
+struct __attribute__((__packed__)) pkt_fixed_header {
 
   union {
-    struct publish_flags flags;
-    uint8_t reserved              : 4;
-  } pkt_flags;
+    struct pkt_connect_fixed_header connect;
+    struct pkt_publish_fixed_header publish;
+  };
 
-  uint8_t pkt_length;
+  uint8_t remain_len[4];
 };
 
 /**
@@ -120,9 +133,9 @@ struct pkt_fixed_header {
  * \param clean_session_flag Flag indicating whether clean session is active.
  * \param keep_alive Number of seconds a session should be kept alive.
  */
-struct connect_variable_header {
+struct __attribute__((__packed__)) connect_variable_header {
   uint16_t pkt_id                 : 16;
-  uint8_t proto_name[3];
+  uint8_t proto_name[4];
   uint8_t proto_level;
   uint8_t user_flag               : 1;
   uint8_t pass_flag               : 1;
@@ -182,34 +195,19 @@ struct pkt_payload {
 };
 
 /**
- * \brief struct to store the mqtt packet.
- * \param pkt pointer to the actual packet.
- * \param fixed pointer to the fixed packet header.
- * \param variable pointer to the variable packet header.
- * \param payload pointer to the packet payload.
+ * \brief Struct to store the mqtt packet.
+ * \param pkt Pointer to the actual packet.
+ * \param fixed Pointer to the fixed packet header.
+ * \param variable Pointer to the variable packet header.
+ * \param payload Pointer to the packet payload.
  * \param length the packet length.
  */
-struct mqtt_header {
+struct mqtt_packet {
   struct pkt_fixed_header *fixed;
   struct pkt_variable_header *variable;
-};
-
-/**
- * \brief struct to store the mqtt packet.
- * \param pkt pointer to the actual packet.
- * \param fixed pointer to the fixed packet header.
- * \param variable pointer to the variable packet header.
- * \param payload pointer to the packet payload.
- * \param length the packet length.
- */
-struct mqtt_header {
-  struct pkt_fixed_header *fixed;
-  struct pkt_variable_header *variable;
+  struct pkt_payload *payload;
   uint16_t length;
 };
-
-
-struct
 
 /**
  * \brief Struct to store a raw packet.
@@ -223,5 +221,8 @@ struct raw_packet {
 /*
  * Function declariations
  */
-void init_packet(struct mqtt_packet **pkt_p, ctrl_pkt_type type);
-void print_pkt_hex(struct mqtt_packet *pkt, int pkt_len);
+void init_packet(struct mqtt_packet **pkt_p);
+int init_packet_header(struct mqtt_packet *pkt_p, ctrl_pkt_type type);
+void encode_remaining_pkt_len(struct mqtt_packet *pkt, unsigned int len);
+unsigned int decode_remaining_pkt_len(struct mqtt_packet *pkt);
+void print_memory_bytes_hex(void *ptr, int bytes);
