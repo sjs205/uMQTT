@@ -24,8 +24,7 @@
  *****************************************************************************/
 #include <netinet/in.h>
 
-#define RX_BUF_LEN    1024
-#define TX_BUF_LEN    1024
+#define TXRX_BUF_LEN    1024
 
 
 /**
@@ -43,21 +42,11 @@ struct broker_conn {
 };
 
 /**
- * \brief Struct to store a recieved packet.
- * \param buf The recieved buffer.
- * \param len The number of valid bytes in the recieved buffer.
+ * \brief Struct to store a TX/RX packet.
+ * \param buf The TX/RX buffer.
+ * \param len The number of valid bytes in the buffer, buf.
  */
-struct rx_pkt {
-  char buf[RX_BUF_LEN];
-  unsigned int len;
-};
-
-/**
- * \brief Struct to store a packet to be transmitted.
- * \param buf The transmit buffer.
- * \param len The number of valid bytes in the transmit buffer.
- */
-struct tx_pkt {
-  char buf[TX_BUF_LEN];
+struct raw_pkt {
+  uint8_t buf[TXRX_BUF_LEN];
   unsigned int len;
 };

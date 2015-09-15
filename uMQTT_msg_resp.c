@@ -37,7 +37,7 @@
 
 /**
  * \brief Function to allocate memory for a broker connection struct.
- * \param conn_p Pointer to the address of the new connection.
+ * \param conn_p Pointer to the address of the new connection struct.
  */
 void init_connection(struct broker_conn **conn_p) {
   struct broker_conn *conn;
@@ -57,6 +57,22 @@ void init_connection(struct broker_conn **conn_p) {
   return;
 }
 
+/**
+ * \brief Function to allocate memory for a raw_pkt struct.
+ * \param pkt_p Pointer to the address of the new packet.
+ */
+void init_raw_packet(struct raw_pkt **pkt_p) {
+  struct raw_pkt *pkt_p;
+
+  if (!(pkt = calloc(1, sizeof(struct raw_pkt)))) {
+    printf("Error: Allocating space for the new packet failed.\n");
+    //free_pkt(pkt);
+  }
+
+  *pkt_p = pkt;
+  return;
+}
+
 int broker_connect(struct broker_conn *conn) {
 
   if ((conn->sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -66,13 +82,15 @@ int broker_connect(struct broker_conn *conn) {
   } 
 
   /* convert ip address to binary */
-  if (inet_pton(conn->serv_addr.sin_family, conn->ip, &conn->serv_addr.sin_addr) <= 0)
+  if (inet_pton(conn->serv_addr.sin_family, conn->ip,
+        &conn->serv_addr.sin_addr) <= 0)
   {
     printf("\n inet_pton error occured\n");
     return 1;
   } 
 
-  if (connect(conn->sockfd, (struct sockaddr *)&conn->serv_addr, sizeof(conn->serv_addr)) < 0)
+  if (connect(conn->sockfd, (struct sockaddr *)&conn->serv_addr,
+        sizeof(conn->serv_addr)) < 0)
   {
     printf("\n Error : Connect Failed \n");
     return 1;
@@ -81,6 +99,12 @@ int broker_connect(struct broker_conn *conn) {
   return conn->sockfd;
 }
 
+int send_packet(struct broker_conn *conn, struct raw_pkt) {
+  n = write(conn->sockfd,pkt->buf,strlen(pkt->buf));
+  if (n < 0) 
+    error("ERROR writing to socket");
+  bzero(buffer,256);
+  n = read(sockfd,buffer,255);
 /*
 int main(int argc, char *argv[])
 {
