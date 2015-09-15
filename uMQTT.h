@@ -24,8 +24,10 @@
  *****************************************************************************/
 #include <stdint.h>
 
-#define MQTT_PROTO_NAME "MQTT"
-#define MQTT_PROTO_LEVEL 0x04
+#define MQTT_PROTO_NAME         "MQTT"
+#define MQTT_PROTO_LEVEL        0x04
+#define MQTT_MAX_PAYLOAD_LEN    1024
+#define MQTT_CLIENT_ID          "uMQTT"
 
 /**
  * \brief Control packet types.
@@ -62,13 +64,6 @@ typedef enum {
 } connect_ret_code;
 
 /**
- * \brief Struct to store the MQTT connection state.
- */
-struct conn_state {
-  //blah
-};
-
-/**
  * \brief Struct to store utf-8 encoded strings, as required for text fields.
  *        See '1.5.3 UTF-8 encoded strings' of the mqtt v3.1.1 specification.
  * \param lenght Length of the string.
@@ -77,6 +72,21 @@ struct conn_state {
 struct __attribute__((__packed__)) utf8_enc_str {
   uint16_t length;
   char utf8_str;
+};
+
+/**
+ * \brief Struct to store the MQTT client data.
+ */
+struct mqtt_client {
+  struct utf8_enc_str clientid;
+};
+
+
+/**
+ * \brief Struct to store the MQTT connection state.
+ */
+struct conn_state {
+  //blah
 };
 
 /**
@@ -203,6 +213,7 @@ struct pkt_variable_header {
 struct pkt_payload {
   /* uint16_t may not be big enough... check */
   uint16_t length;
+  /* utf8 isn't uint8_t ... */
   uint8_t *data;
 };
 
@@ -235,6 +246,7 @@ struct raw_packet {
  */
 void init_packet(struct mqtt_packet **pkt_p);
 int init_packet_header(struct mqtt_packet *pkt_p, ctrl_pkt_type type);
+int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type);
 void free_pkt(struct mqtt_packet *pkt);
 void free_pkt_fixed_header(struct pkt_fixed_header *fix);
 void free_pkt_variable_header(struct pkt_variable_header *var);

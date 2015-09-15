@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <arpa/inet.h> 
 
+#include "uMQTT.h"
 #include "uMQTT_msg_resp.h"
 
 /**
@@ -62,7 +63,7 @@ void init_connection(struct broker_conn **conn_p) {
  * \param pkt_p Pointer to the address of the new packet.
  */
 void init_raw_packet(struct raw_pkt **pkt_p) {
-  struct raw_pkt *pkt_p;
+  struct raw_pkt *pkt;
 
   if (!(pkt = calloc(1, sizeof(struct raw_pkt)))) {
     printf("Error: Allocating space for the new packet failed.\n");
@@ -99,12 +100,21 @@ int broker_connect(struct broker_conn *conn) {
   return conn->sockfd;
 }
 
-int send_packet(struct broker_conn *conn, struct raw_pkt) {
-  n = write(conn->sockfd,pkt->buf,strlen(pkt->buf));
+int send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+  int n = write(conn->sockfd,pkt->buf, pkt->len); //strlen(pkt->buf));
   if (n < 0) 
     error("ERROR writing to socket");
-  bzero(buffer,256);
-  n = read(sockfd,buffer,255);
+  return n;
+}
+
+int read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+  int n = read(conn->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
+    //write(conn-sockfd,pkt->buf, pkt->len); //strlen(pkt->buf));
+  if (n < 0) 
+    error("ERROR reading socket");
+  return n;
+}
+
 /*
 int main(int argc, char *argv[])
 {

@@ -29,6 +29,23 @@
 #include "uMQTT.h"
 
 /**
+ * \brief Function to allocate memory for an mqtt_client.
+ * \param client Pointer to the address of the new mqtt_client struct.
+ */
+void init_client(struct mqtt_client **client_p) {
+  struct mqtt_client *client;
+
+  if (!(client = calloc(1, sizeof(struct mqtt_client)))) {
+    printf("Error: Allocating space for MQTT client failed.\n");
+    //free_pkt(pkt);
+  }
+
+  *client_p = client;
+
+  return;
+}
+
+/**
  * \brief Function to allocate memory for an mqtt packet.
  * \param pkt Pointer to the address of the new packet.
  */
@@ -50,7 +67,7 @@ void init_packet(struct mqtt_packet **pkt_p) {
  *        including both fixed and variable header components.
  * \param pkt Pointer to the address of the packet containing headers.
  * \param type The type of packet to be created.
- * \retrun Length of new packet headers
+ * \return Length of new packet headers
  */
 int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
@@ -100,6 +117,51 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
   pkt->length = fix_len + var_len;
 
   encode_remaining_pkt_len(pkt, var_len);
+
+  return pkt->length;
+}
+
+/**
+ * \brief Function to allocate memory for mqtt packet payload.
+ * \param pkt Pointer to the address of the packet containing payload.
+ * \param type The type of payload to be created.
+ * \return Length of packet payload
+ */
+int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type) {
+
+  unsigned int pay_len = 0;
+
+  switch (type) {
+    case CONNECT:
+
+      /* allocate payload memory */
+      if (!(pkt->payload = calloc(1, MQTT_MAX_PAYLOAD_LEN))) {
+        printf("Error: Allocating space for payload.\n");
+        //free_pkt_variable_header(pkt->variable);
+      }
+
+      struct utf8_enc_str *client_id = (struct utf8_enc_str *)&pkt->payload->data;
+
+      memcpy(&client_id->utf8_str, &MQTT_CLIENT_ID, sizeof(MQTT_CLIENT_ID));
+
+      client_id->length = sizeof(MQTT_CLIENT_ID) - 1;
+      pkt->payload->length = sizeof(struct utf8_enc_str) + client_id->length - 1;
+
+      break;
+
+    case PUBLISH:
+
+    default:
+      printf("Error: MQTT packet type not currently supported.\n");
+      return 0;
+  }
+
+  /* debug */
+  printf("Length of payload: %d\n", pkt->payload->length);
+
+  pkt->length += pkt->payload->length;
+
+  encode_remaining_pkt_len(pkt, pkt->length + pkt->payload->length);
 
   return pkt->length;
 }
@@ -161,6 +223,7 @@ void print_memory_bytes_hex(void *ptr, int bytes) {
   for (i = 0; i <= bytes; i++) {
     printf("0x%02X ", ((uint8_t *)ptr)[i]);
   }
+  printf("\n");
 
   return;
 }
