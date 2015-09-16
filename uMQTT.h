@@ -66,11 +66,13 @@ typedef enum {
 /**
  * \brief Struct to store utf-8 encoded strings, as required for text fields.
  *        See '1.5.3 UTF-8 encoded strings' of the mqtt v3.1.1 specification.
- * \param lenght Length of the string.
+ * \param len_msb Length of the string - MSB.
+ * \param len_lsb Length of the string - LSB.
  * \param utf8_str Pointer to the actual string data.
  */
 struct __attribute__((__packed__)) utf8_enc_str {
-  uint16_t length;
+  uint8_t len_msb;
+  uint8_t len_lsb;
   char utf8_str;
 };
 
@@ -208,28 +210,31 @@ struct pkt_variable_header {
 
 /**
  * \brief Struct to store the control packet payload.
- * \param length The payload length.
+ * \param data The raw payload data.
  */
 struct pkt_payload {
-  /* uint16_t may not be big enough... check */
-  uint16_t length;
-  /* utf8 isn't uint8_t ... */
   uint8_t *data;
 };
 
 /**
  * \brief Struct to store the mqtt packet.
- * \param pkt Pointer to the actual packet.
  * \param fixed Pointer to the fixed packet header.
  * \param variable Pointer to the variable packet header.
  * \param payload Pointer to the packet payload.
- * \param length the packet length.
+ * \param fix_len The length of the fixed header.
+ * \param var_len The length of the variable header.
+ * \param pay_len The length of the payload.
+ * \param len The total packet length.
  */
 struct mqtt_packet {
   struct pkt_fixed_header *fixed;
   struct pkt_variable_header *variable;
   struct pkt_payload *payload;
-  uint16_t length;
+
+  uint8_t fix_len;
+  uint8_t var_len;
+  uint8_t pay_len;
+  uint16_t len;
 };
 
 /**
@@ -252,6 +257,7 @@ void free_pkt_fixed_header(struct pkt_fixed_header *fix);
 void free_pkt_variable_header(struct pkt_variable_header *var);
 void free_pkt_payload(struct pkt_payload *pld);
 
-void encode_remaining_pkt_len(struct mqtt_packet *pkt, unsigned int len);
-unsigned int decode_remaining_pkt_len(struct mqtt_packet *pkt);
-void print_memory_bytes_hex(void *ptr, int bytes);
+void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
+unsigned int decode_remaining_len(struct mqtt_packet *pkt);
+int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf, uint16_t len);
+void print_memory_bytes_hex(void *ptr, unsigned int len);

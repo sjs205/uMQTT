@@ -75,8 +75,8 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
   unsigned int var_len = 0;
 
   /* allocate fixed header memory - always same size*/
-  fix_len = sizeof(struct pkt_fixed_header);
-  if (!(pkt->fixed = calloc(1, fix_len))) {
+  pkt->fix_len = sizeof(struct pkt_fixed_header);
+  if (!(pkt->fixed = calloc(1, pkt->fix_len))) {
     printf("Error: Allocating space for fixed header failed.\n");
     free_pkt_fixed_header(pkt->fixed);
   }
@@ -87,14 +87,14 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
   switch (type) {
     case CONNECT:
       /* variable header */
-      var_len = sizeof(struct connect_variable_header);
+      pkt->var_len = sizeof(struct connect_variable_header);
 
       /* allocate variable header */
-      if (!(pkt->variable = calloc(1, var_len))) {
+      if (!(pkt->variable = calloc(1, pkt->var_len))) {
         printf("Error: Allocating space for variable header failed.\n");
         free_pkt_variable_header(pkt->variable);
       }
-      pkt->variable->connect.name_len = 0x04;
+      pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8); //swap endianess
       memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
       pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
 
@@ -102,7 +102,7 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
     case PUBLISH:
       /* variable header */
-      var_len = sizeof(struct publish_variable_header);
+      pkt->var_len = sizeof(struct publish_variable_header);
       break;
 
     default:
@@ -110,15 +110,11 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       return 0;
   }
 
-  /* debug */
-  printf("Length of fixed packet header: %d\n", fix_len);
-  printf("Length of variable packet header: %d\n", var_len);
+  encode_remaining_len(pkt, pkt->var_len);
 
-  pkt->length = fix_len + var_len;
+  pkt->len = pkt->fix_len + pkt->var_len;
 
-  encode_remaining_pkt_len(pkt, var_len);
-
-  return pkt->length;
+  return pkt->len;
 }
 
 /**
@@ -129,8 +125,6 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
  */
 int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
-  unsigned int pay_len = 0;
-
   switch (type) {
     case CONNECT:
 
@@ -140,12 +134,9 @@ int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type) {
         //free_pkt_variable_header(pkt->variable);
       }
 
-      struct utf8_enc_str *client_id = (struct utf8_enc_str *)&pkt->payload->data;
-
-      memcpy(&client_id->utf8_str, &MQTT_CLIENT_ID, sizeof(MQTT_CLIENT_ID));
-
-      client_id->length = sizeof(MQTT_CLIENT_ID) - 1;
-      pkt->payload->length = sizeof(struct utf8_enc_str) + client_id->length - 1;
+      pkt->pay_len = encode_utf8_string(
+          (struct utf8_enc_str *)&pkt->payload->data, MQTT_CLIENT_ID,
+          (sizeof(MQTT_CLIENT_ID) - 1));
 
       break;
 
@@ -156,14 +147,11 @@ int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       return 0;
   }
 
-  /* debug */
-  printf("Length of payload: %d\n", pkt->payload->length);
+  pkt->len += pkt->pay_len;
 
-  pkt->length += pkt->payload->length;
+  encode_remaining_len(pkt, (pkt->var_len + pkt->pay_len));
 
-  encode_remaining_pkt_len(pkt, pkt->length + pkt->payload->length);
-
-  return pkt->length;
+  return pkt->pay_len;
 }
 
 /**
@@ -172,7 +160,7 @@ int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type) {
  * \param pkt The packet whose length to encode.
  * \param len The length that should be encoded.
  */
-void encode_remaining_pkt_len(struct mqtt_packet *pkt, unsigned int len) {
+void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
   int i = 0;
   do {
     pkt->fixed->remain_len[i] = len % 128;
@@ -184,6 +172,9 @@ void encode_remaining_pkt_len(struct mqtt_packet *pkt, unsigned int len) {
     i++;
   } while (len > 0 && i < 4);
 
+  /* Set the length of the fixed pkt */
+  pkt->fix_len = 1 + i;
+
   return;
 }
 
@@ -193,7 +184,7 @@ void encode_remaining_pkt_len(struct mqtt_packet *pkt, unsigned int len) {
  * \param pkt The packet whose length to decode.
  * \return The length that should be encoded.
  */
-unsigned int decode_remaining_pkt_len(struct mqtt_packet *pkt) {
+unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
   int i = 0;
   unsigned int len = 0;
   unsigned int product = 1;
@@ -212,15 +203,37 @@ unsigned int decode_remaining_pkt_len(struct mqtt_packet *pkt) {
 }
 
 /**
+ * \brief Function to encode a utf8 string.
+ * \param utf8_str Pointer to the struct holding the utf8_enc_str
+ * \param buf The string to encode.
+ * \param len The length of str
+ * \return len of encoded string
+ */
+int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf, uint16_t len) {
+  if (len > 0xfffe) {
+    printf("Error: String too long to be encoded as UTF8 string\n");
+    return 0;
+  }
+
+  memcpy(&utf8_str->utf8_str, buf, len);
+
+  utf8_str->len_msb = (uint8_t)(len >> 8);
+  utf8_str->len_lsb = (uint8_t)len;
+
+  /* subtract 1 for the utf8_str placeholder */
+  return (sizeof(struct utf8_enc_str) - 1)  + len;
+}
+
+/**
  * \brief Function to print memory in hex.
  * \param ptr The memory to start printing.
- * \param bytes The number of bytes to print.
+ * \param len The number of bytes to print.
  */
-void print_memory_bytes_hex(void *ptr, int bytes) {
+void print_memory_bytes_hex(void *ptr, unsigned int len) {
   int i;
 
-  printf("%d bytes starting at address 0x%X\n", (bytes + 1), &ptr);
-  for (i = 0; i <= bytes; i++) {
+  printf("%d bytes starting at address 0x%X\n", len, &ptr);
+  for (i = 0; i < len; i++) {
     printf("0x%02X ", ((uint8_t *)ptr)[i]);
   }
   printf("\n");

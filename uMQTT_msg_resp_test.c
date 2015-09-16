@@ -38,14 +38,19 @@ int main() {
 
   init_packet_payload(pkt, CONNECT);
 
-  printf("Length of new packet = %d\n", pkt->length);
+  printf("\nFixed header:\n");
+  printf("Length: %d\n", pkt->fix_len);
+  print_memory_bytes_hex((void *)pkt->fixed, pkt->fix_len);
 
-  printf("Fixed header:\n");
-  print_memory_bytes_hex((void *)pkt->fixed, 1);
-  printf("Variable header:\n");
-  print_memory_bytes_hex((void *)pkt->variable, 0x0A);
-  printf("Payload:\n");
-  print_memory_bytes_hex((void *)&pkt->payload->data, 7);
+  printf("\nVariable header:\n");
+  printf("Length: %d\n", pkt->var_len);
+  print_memory_bytes_hex((void *)pkt->variable, pkt->var_len);
+
+  printf("\nPayload:\n");
+  printf("Length: %d\n", pkt->pay_len);
+  print_memory_bytes_hex((void *)&pkt->payload->data, pkt->pay_len);
+
+  printf("\nTotal Length of new packet = %d\n", pkt->len);
 
   init_connection(&conn);
   if (!conn)
@@ -55,31 +60,26 @@ int main() {
 
   struct raw_pkt *tx_pkt, *rx_pkt;
   init_raw_packet(&tx_pkt);
+tx_pkt->len = pkt->len;
   init_raw_packet(&rx_pkt);
 
-  memcpy((void *)tx_pkt->buf,pkt->fixed,  2);
-  memcpy( (void *)&tx_pkt->buf[2],pkt->variable, 0x0A);
+  unsigned int offset = 0;
+  memcpy((void *)tx_pkt->buf, pkt->fixed, pkt->fix_len);
+  memcpy((void *)&tx_pkt->buf[pkt->fix_len], pkt->variable, pkt->var_len);
+  memcpy((void *)&tx_pkt->buf[pkt->fix_len + pkt->var_len],&pkt->payload->data, pkt->pay_len);
 
-  tx_pkt->len = 0x0A + 0x01;
-
-  memcpy((void *)tx_pkt->buf,pkt->fixed,  2);
-  memcpy((void *)&tx_pkt->buf[2],pkt->variable, 0x0A);
-  memcpy((void *)&tx_pkt->buf[11],&pkt->payload->data, 7);
-
-  tx_pkt->len = 0x0A + 0x01+ 6;
-
-  printf("TX packet:\n");
+  printf("\nTX packet:\n");
   print_memory_bytes_hex((void *)tx_pkt->buf, tx_pkt->len);
 
 
   send_packet(conn, tx_pkt);
 
   rx_pkt->len = read_packet(conn, rx_pkt);
-  printf("RX packet:\n");
+  printf("\nRX packet:\n");
   print_memory_bytes_hex((void *)rx_pkt->buf, rx_pkt->len);
 
-
   do {
-  }while (1);
+
+  } while (1);
 }
 
