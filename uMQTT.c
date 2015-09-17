@@ -82,7 +82,7 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
   }
 
   //pkt->fixed->ps.reserved = 6;
-  pkt->fixed->connect.type = type;
+  pkt->fixed->generic.type = type;
 
   switch (type) {
     case CONNECT:

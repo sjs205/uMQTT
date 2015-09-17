@@ -101,11 +101,11 @@ struct mqtt_conf {
 };
 
 /**
- * \brief Struct to store the fixed header of a CONNECT control packet.
+ * \brief Struct to store a generic fixed header of a control packet.
  * \param type The type of control packet.
  * \param reserved Reserved for future use - see MQTT spec.
  */
-struct __attribute__((__packed__)) pkt_connect_fixed_header {
+struct __attribute__((__packed__)) pkt_generic_fixed_header {
 
   uint8_t reserved                : 4;
   ctrl_pkt_type type              : 4;
@@ -128,7 +128,7 @@ struct __attribute__((__packed__)) pkt_publish_fixed_header {
 
 /**
  * \brief Struct to store the fixed header of a control packet.
- * \param connect CONNECT fixed header
+ * \param generic igeneric fixed header
  * \param publish PUBLISH fixed header
  * \param remain_length The remaining length of the packet not including
  *                   the fixed header - note, currently, only 127 bytes
@@ -137,7 +137,7 @@ struct __attribute__((__packed__)) pkt_publish_fixed_header {
 struct __attribute__((__packed__)) pkt_fixed_header {
 
   union {
-    struct pkt_connect_fixed_header connect;
+    struct pkt_generic_fixed_header generic;
     struct pkt_publish_fixed_header publish;
   };
 
