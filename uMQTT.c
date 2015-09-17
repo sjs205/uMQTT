@@ -74,18 +74,17 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
   unsigned int fix_len = 0;
   unsigned int var_len = 0;
 
-  /* allocate fixed header memory - always same size*/
+  /* allocate fixed header memory */
   pkt->fix_len = sizeof(struct pkt_fixed_header);
   if (!(pkt->fixed = calloc(1, pkt->fix_len))) {
     printf("Error: Allocating space for fixed header failed.\n");
     free_pkt_fixed_header(pkt->fixed);
   }
 
-  //pkt->fixed->ps.reserved = 6;
-  pkt->fixed->generic.type = type;
-
   switch (type) {
     case CONNECT:
+      pkt->fixed->generic.type = type;
+
       /* variable header */
       pkt->var_len = sizeof(struct connect_variable_header);
 
@@ -101,9 +100,19 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       break;
 
     case PUBLISH:
+      pkt->fixed->publish.type = type;
+
       /* variable header */
       pkt->var_len = sizeof(struct publish_variable_header);
       break;
+
+    case PINGREQ:
+    case PINGRESP:
+    case DISCONNECT:
+      pkt->fixed->publish.type = type;
+
+      break;
+
 
     default:
       printf("Error: MQTT packet type not currently supported.\n");
