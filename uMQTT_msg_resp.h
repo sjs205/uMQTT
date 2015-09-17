@@ -50,3 +50,10 @@ struct raw_pkt {
   uint8_t buf[TXRX_BUF_LEN];
   unsigned int len;
 };
+
+void init_connection(struct broker_conn **conn_p, char *ip,
+    unsigned int ip_len,  unsigned int port);
+void init_raw_packet(struct raw_pkt **pkt_p);
+int broker_connect(struct broker_conn *conn);
+int send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
+int read_packet(struct broker_conn *conn, struct raw_pkt *pkt);

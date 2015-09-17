@@ -28,8 +28,18 @@
 #include "uMQTT.h"
 #include "uMQTT_msg_resp.h"
 
+#define MQTT_BROKER_IP        "127.0.0.1"
+#define MQTT_BROKER_PORT      1883
+
 int main() {
   struct broker_conn *conn;
+
+  init_connection(&conn, MQTT_BROKER_IP, sizeof(MQTT_BROKER_IP), 1883);
+  if (!conn)
+    return -1;
+  
+  printf("New broker connection:\nip: %s port: %d\n", conn->ip, conn->port);
+
   struct mqtt_packet *pkt = '\0';
 
   init_packet(&pkt);
@@ -52,15 +62,12 @@ int main() {
 
   printf("\nTotal Length of new packet = %d\n", pkt->len);
 
-  init_connection(&conn);
-  if (!conn)
-    return -1;
 
   broker_connect(conn);
 
   struct raw_pkt *tx_pkt, *rx_pkt;
   init_raw_packet(&tx_pkt);
-tx_pkt->len = pkt->len;
+  tx_pkt->len = pkt->len;
   init_raw_packet(&rx_pkt);
 
   unsigned int offset = 0;
@@ -77,6 +84,8 @@ tx_pkt->len = pkt->len;
   rx_pkt->len = read_packet(conn, rx_pkt);
   printf("\nRX packet:\n");
   print_memory_bytes_hex((void *)rx_pkt->buf, rx_pkt->len);
+
+
 
   do {
 
