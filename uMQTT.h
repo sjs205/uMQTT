@@ -24,10 +24,12 @@
  *****************************************************************************/
 #include <stdint.h>
 
+/* default defines - some can be overridden */
 #define MQTT_PROTO_NAME         "MQTT"
 #define MQTT_PROTO_LEVEL        0x04
 #define MQTT_MAX_PAYLOAD_LEN    1024
 #define MQTT_CLIENT_ID          "uMQTT"
+#define MQTT_DEFAULT_TOPIC      "uMQTT_PUB"
 
 /**
  * \brief Control packet types.
@@ -120,10 +122,10 @@ struct __attribute__((__packed__)) pkt_generic_fixed_header {
  */
 struct __attribute__((__packed__)) pkt_publish_fixed_header {
 
-  uint8_t retain_flag             : 1;
-  uint8_t qos_flag                : 2;
-  uint8_t dup_flag                : 1;
-  ctrl_pkt_type type              : 4;
+  uint8_t retain                  : 1;
+  uint8_t qos                     : 2;
+  uint8_t dup                     : 1;
+  ctrl_pkt_type                   : 4;
 };
 
 /**
@@ -250,7 +252,8 @@ struct raw_packet {
  * Function declariations
  */
 void init_packet(struct mqtt_packet **pkt_p);
-int init_packet_header(struct mqtt_packet *pkt_p, ctrl_pkt_type type);
+int init_packet_fixed_header(struct mqtt_packet *pkt, ctrl_pkt_type type);
+int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type);
 int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type);
 void free_pkt(struct mqtt_packet *pkt);
 void free_pkt_fixed_header(struct pkt_fixed_header *fix);

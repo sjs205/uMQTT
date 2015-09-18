@@ -63,16 +63,13 @@ void init_packet(struct mqtt_packet **pkt_p) {
 }
 
 /**
- * \brief Function to allocate memory for mqtt packet headers
- *        including both fixed and variable header components.
+ * \brief Function to allocate memory for mqtt fixed packet header
+ *        and set the defaults.
  * \param pkt Pointer to the address of the packet containing headers.
  * \param type The type of packet to be created.
  * \return Length of new packet headers
  */
-int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
-
-  unsigned int fix_len = 0;
-  unsigned int var_len = 0;
+int init_packet_fixed_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
   /* allocate fixed header memory */
   pkt->fix_len = sizeof(struct pkt_fixed_header);
@@ -81,9 +78,26 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
     free_pkt_fixed_header(pkt->fixed);
   }
 
+  pkt->fixed->generic.type = type;
+
+  encode_remaining_len(pkt, 0);
+
+  pkt->len = pkt->fix_len;
+
+  return pkt->len;
+}
+
+/**
+ * \brief Function to allocate memory for mqtt variable packet header
+ *        and set the defaults.
+ * \param pkt Pointer to the address of the packet containing headers.
+ * \param type The type of packet to be created.
+ * \return Length of new packet headers
+ */
+int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
+
   switch (type) {
     case CONNECT:
-      pkt->fixed->generic.type = type;
 
       /* variable header */
       pkt->var_len = sizeof(struct connect_variable_header);
@@ -93,6 +107,8 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
         printf("Error: Allocating space for variable header failed.\n");
         free_pkt_variable_header(pkt->variable);
       }
+
+      /* defaults */
       pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8); //swap endianess
       memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
       pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
@@ -100,16 +116,29 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       break;
 
     case PUBLISH:
-      pkt->fixed->publish.type = type;
+      /* variable header - default action does not include pkt_id => qos = 0 */
+      pkt->var_len = (sizeof(struct utf8_enc_str) - 1) +
+        (sizeof(MQTT_DEFAULT_TOPIC) - 1);
 
-      /* variable header */
-      pkt->var_len = sizeof(struct publish_variable_header);
+      /* allocate variable header */
+      if (!(pkt->variable = calloc(1, pkt->var_len))) {
+        printf("Error: Allocating space for variable header failed.\n");
+        free_pkt_variable_header(pkt->variable);
+      }
+
+      /* defaults */
+      pkt->pay_len = encode_utf8_string(&pkt->variable->publish.topic_name, MQTT_DEFAULT_TOPIC,
+          (sizeof(MQTT_DEFAULT_TOPIC) - 1));
+
+      if (pkt->fixed->publish.qos) {
+        /* set packet identifier */
+      }
+
       break;
 
     case PINGREQ:
     case PINGRESP:
     case DISCONNECT:
-      pkt->fixed->publish.type = type;
 
       break;
 
@@ -119,12 +148,14 @@ int init_packet_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       return 0;
   }
 
+  /* Remaining length currently zero */
   encode_remaining_len(pkt, pkt->var_len);
 
   pkt->len = pkt->fix_len + pkt->var_len;
 
   return pkt->len;
 }
+
 
 /**
  * \brief Function to allocate memory for mqtt packet payload.
