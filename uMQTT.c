@@ -159,11 +159,18 @@ int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
 /**
  * \brief Function to allocate memory for mqtt packet payload.
+ *        NOTE: Currently if the payload type = PUBLISH, *payload
+          pointer is substituted into the pkt->payload. In the
+          future, it may be better to actually copy this data to a 
+          new payload data struct.
  * \param pkt Pointer to the address of the packet containing payload.
  * \param type The type of payload to be created.
+ * \param *payload Pointer to payload data.
+ * \param *pay_len The lenth of the attached payload data.
  * \return Length of packet payload
  */
-int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type) {
+int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
+    uint8_t *payload, uint8_t pay_len) {
 
   switch (type) {
     case CONNECT:
@@ -181,6 +188,10 @@ int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       break;
 
     case PUBLISH:
+      pkt->pay_len = pay_len;
+      pkt->payload = (struct pkt_payload *)payload;
+
+      break;
 
     default:
       printf("Error: MQTT packet type not currently supported.\n");

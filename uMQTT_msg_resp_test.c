@@ -49,7 +49,7 @@ int main() {
   init_packet_fixed_header(con_pkt, CONNECT);
   init_packet_variable_header(con_pkt, CONNECT);
 
-  init_packet_payload(con_pkt, CONNECT);
+  init_packet_payload(con_pkt, CONNECT, '\0', 0);
 
   printf("\nFixed header:\n");
   printf("Length: %d\n", con_pkt->fix_len);
@@ -97,7 +97,7 @@ int main() {
   init_packet_fixed_header(pub_pkt, PUBLISH);
   init_packet_variable_header(pub_pkt, PUBLISH);
 
-  init_packet_payload(pub_pkt, PUBLISH);
+  init_packet_payload(pub_pkt, PUBLISH, "hi", 2);
 
   printf("\nFixed header:\n");
   printf("Length: %d\n", pub_pkt->fix_len);
@@ -107,12 +107,12 @@ int main() {
   printf("Length: %d\n", pub_pkt->var_len);
   print_memory_bytes_hex((void *)pub_pkt->variable, pub_pkt->var_len);
 
-  /*
-   * printf("\nPayload:\n");
+  
+  printf("\nPayload:\n");
   printf("Length: %d\n", pub_pkt->pay_len);
   print_memory_bytes_hex((void *)&pub_pkt->payload->data,
       pub_pkt->pay_len);
-*/
+
   printf("\nTotal Length of new packet = %d\n", pub_pkt->len);
 
   tx_pkt->len = pub_pkt->len;
@@ -120,8 +120,8 @@ int main() {
   memcpy((void *)tx_pkt->buf, pub_pkt->fixed, pub_pkt->fix_len);
   memcpy((void *)&tx_pkt->buf[pub_pkt->fix_len], pub_pkt->variable,
       pub_pkt->var_len);
-  //memcpy((void *)&tx_pkt->buf[pub_pkt->fix_len + pub_pkt->var_len],
-  //    &pub_pkt->payload->data, pub_pkt->pay_len);
+  memcpy((void *)&tx_pkt->buf[pub_pkt->fix_len + pub_pkt->var_len],
+      &pub_pkt->payload->data, pub_pkt->pay_len);
 
   printf("\nTX packet:\n");
   print_memory_bytes_hex((void *)tx_pkt->buf, tx_pkt->len);
