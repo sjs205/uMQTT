@@ -32,6 +32,15 @@
 #define MQTT_DEFAULT_TOPIC      "uMQTT_PUB"
 
 /**
+ * \brief uMQTT return codes.
+ */
+typedef enum {
+  UMQTT_SUCCESS,
+  UMQTT_ERROR,
+  UMQTT_MEM_ERROR,
+} umqtt_ret;
+
+/**
  * \brief Control packet types.
  */
 typedef enum {
@@ -251,11 +260,16 @@ struct raw_packet {
 /*
  * Function declariations
  */
-void init_packet(struct mqtt_packet **pkt_p);
-int init_packet_fixed_header(struct mqtt_packet *pkt, ctrl_pkt_type type);
-int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type);
-int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
+umqtt_ret init_packet(struct mqtt_packet **pkt_p);
+umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
+    ctrl_pkt_type type);
+umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
+    ctrl_pkt_type type);
+umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, uint8_t pay_len);
+struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
+    uint8_t *payload, uint8_t pay_len);
+
 void free_pkt(struct mqtt_packet *pkt);
 void free_pkt_fixed_header(struct pkt_fixed_header *fix);
 void free_pkt_variable_header(struct pkt_variable_header *var);

@@ -29,37 +29,22 @@
 #include "uMQTT.h"
 
 /**
- * \brief Function to allocate memory for an mqtt_client.
- * \param client Pointer to the address of the new mqtt_client struct.
- */
-void init_client(struct mqtt_client **client_p) {
-  struct mqtt_client *client;
-
-  if (!(client = calloc(1, sizeof(struct mqtt_client)))) {
-    printf("Error: Allocating space for MQTT client failed.\n");
-    //free_pkt(pkt);
-  }
-
-  *client_p = client;
-
-  return;
-}
-
-/**
  * \brief Function to allocate memory for an mqtt packet.
  * \param pkt Pointer to the address of the new packet.
+ * \return umqtt_ret return code.
  */
-void init_packet(struct mqtt_packet **pkt_p) {
+umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
   struct mqtt_packet *pkt;
 
   if (!(pkt = calloc(1, sizeof(struct mqtt_packet)))) {
     printf("Error: Allocating space for MQTT packet failed.\n");
     free_pkt(pkt);
+    return UMQTT_MEM_ERROR;
   }
 
   *pkt_p = pkt;
 
-  return;
+  return UMQTT_SUCCESS;
 }
 
 /**
@@ -67,15 +52,18 @@ void init_packet(struct mqtt_packet **pkt_p) {
  *        and set the defaults.
  * \param pkt Pointer to the address of the packet containing headers.
  * \param type The type of packet to be created.
- * \return Length of new packet headers
+ * \return umqtt_ret return code.
  */
-int init_packet_fixed_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
+umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
+    ctrl_pkt_type type) {
 
   /* allocate fixed header memory */
   pkt->fix_len = sizeof(struct pkt_fixed_header);
   if (!(pkt->fixed = calloc(1, pkt->fix_len))) {
     printf("Error: Allocating space for fixed header failed.\n");
     free_pkt_fixed_header(pkt->fixed);
+
+    return UMQTT_MEM_ERROR;
   }
 
   pkt->fixed->generic.type = type;
@@ -84,7 +72,7 @@ int init_packet_fixed_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
   pkt->len = pkt->fix_len;
 
-  return pkt->len;
+  return UMQTT_SUCCESS;
 }
 
 /**
@@ -92,9 +80,10 @@ int init_packet_fixed_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
  *        and set the defaults.
  * \param pkt Pointer to the address of the packet containing headers.
  * \param type The type of packet to be created.
- * \return Length of new packet headers
+ * \return umqtt_ret return code.
  */
-int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
+umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
+    ctrl_pkt_type type) {
 
   switch (type) {
     case CONNECT:
@@ -106,6 +95,8 @@ int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       if (!(pkt->variable = calloc(1, pkt->var_len))) {
         printf("Error: Allocating space for variable header failed.\n");
         free_pkt_variable_header(pkt->variable);
+
+        return UMQTT_MEM_ERROR;
       }
 
       /* defaults */
@@ -124,11 +115,13 @@ int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
       if (!(pkt->variable = calloc(1, pkt->var_len))) {
         printf("Error: Allocating space for variable header failed.\n");
         free_pkt_variable_header(pkt->variable);
+
+        return UMQTT_MEM_ERROR;
       }
 
       /* defaults */
-      pkt->pay_len = encode_utf8_string(&pkt->variable->publish.topic_name, MQTT_DEFAULT_TOPIC,
-          (sizeof(MQTT_DEFAULT_TOPIC) - 1));
+      pkt->pay_len = encode_utf8_string(&pkt->variable->publish.topic_name,
+          MQTT_DEFAULT_TOPIC, (sizeof(MQTT_DEFAULT_TOPIC) - 1));
 
       if (pkt->fixed->publish.qos) {
         /* set packet identifier */
@@ -142,10 +135,10 @@ int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
       break;
 
-
     default:
       printf("Error: MQTT packet type not currently supported.\n");
-      return 0;
+
+      return UMQTT_ERROR;
   }
 
   /* Remaining length currently zero */
@@ -153,9 +146,8 @@ int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
 
   pkt->len = pkt->fix_len + pkt->var_len;
 
-  return pkt->len;
+  return UMQTT_SUCCESS;
 }
-
 
 /**
  * \brief Function to allocate memory for mqtt packet payload.
@@ -167,9 +159,9 @@ int init_packet_variable_header(struct mqtt_packet *pkt, ctrl_pkt_type type) {
  * \param type The type of payload to be created.
  * \param *payload Pointer to payload data.
  * \param *pay_len The lenth of the attached payload data.
- * \return Length of packet payload
+ * \return umqtt_ret return code.
  */
-int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
+umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, uint8_t pay_len) {
 
   switch (type) {
@@ -178,7 +170,9 @@ int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
       /* allocate payload memory */
       if (!(pkt->payload = calloc(1, MQTT_MAX_PAYLOAD_LEN))) {
         printf("Error: Allocating space for payload.\n");
-        //free_pkt_variable_header(pkt->variable);
+        free_pkt_payload(pkt->payload);
+
+        return UMQTT_MEM_ERROR;
       }
 
       pkt->pay_len = encode_utf8_string(
@@ -195,19 +189,57 @@ int init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 
     default:
       printf("Error: MQTT packet type not currently supported.\n");
-      return 0;
+
+      return UMQTT_ERROR;
   }
 
   pkt->len += pkt->pay_len;
 
   encode_remaining_len(pkt, (pkt->var_len + pkt->pay_len));
 
-  return pkt->pay_len;
+  return UMQTT_SUCCESS;
 }
 
 /**
- * \brief Function to encode the remaining length of an MQTT packet, after the fixed header,
- *        into the fixed packet header - see section 2.2.3 of the MQTT spec.
+ * \brief Function to construct a new default mqtt packet.
+ * \param type The type of packet to be created.
+ * \param *payload Pointer to payload data.
+ * \param *pay_len The lenth of the attached payload data.
+ * \return Pointer to new mqtt_packet struct, 0 on failurer.
+ */
+struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
+    uint8_t *payload, uint8_t pay_len) {
+
+  struct mqtt_packet *pkt = '\0';
+
+  if (init_packet(&pkt)) {
+    free_pkt(pkt);
+    return 0;
+  }
+
+  if (init_packet_fixed_header(pkt, CONNECT)) {
+    free_pkt(pkt);
+    return 0;
+  }
+
+  if (init_packet_variable_header(pkt, CONNECT)) {
+    free_pkt(pkt);
+    return 0;
+  }
+
+  if (init_packet_payload(pkt, CONNECT, '\0', 0)) {
+    free_pkt(pkt);
+    return 0;
+  }
+
+  return pkt;
+
+}
+
+/**
+ * \brief Function to encode the remaining length of an MQTT packet,
+ *        after the fixed header, into the fixed packet header - see section
+ *        2.2.3 of the MQTT spec.
  * \param pkt The packet whose length to encode.
  * \param len The length that should be encoded.
  */
@@ -230,8 +262,8 @@ void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
 }
 
 /**
- * \brief Function to decode the remain_len variable in the fixed header of an MQTT packet
- *        into an int - see section 2.2.3 of the MQTT spec.
+ * \brief Function to decode the remain_len variable in the fixed header of
+ *        an MQTT packet into an int - see section 2.2.3 of the MQTT spec.
  * \param pkt The packet whose length to decode.
  * \return The length that should be encoded.
  */
@@ -260,7 +292,8 @@ unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
  * \param len The length of str
  * \return len of encoded string
  */
-int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf, uint16_t len) {
+int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
+    uint16_t len) {
   if (len > 0xfffe) {
     printf("Error: String too long to be encoded as UTF8 string\n");
     return 0;

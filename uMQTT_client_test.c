@@ -42,14 +42,7 @@ int main() {
 
   /* connect */
 
-  struct mqtt_packet *con_pkt = '\0';
-
-  init_packet(&con_pkt);
-
-  init_packet_fixed_header(con_pkt, CONNECT);
-  init_packet_variable_header(con_pkt, CONNECT);
-
-  init_packet_payload(con_pkt, CONNECT, '\0', 0);
+  struct mqtt_packet *con_pkt = construct_default_packet(CONNECT, 0, 0);
 
   printf("\nFixed header:\n");
   printf("Length: %d\n", con_pkt->fix_len);
