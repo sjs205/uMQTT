@@ -1,5 +1,5 @@
 /******************************************************************************
- * File: uMQTT_msg_resp_test.c
+ * File: uMQTT_client_test.c
  * Description: Program to create a test broker connection. 
  * Author: Steven Swann - swannonline@googlemail.com
  *
@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "uMQTT.h"
-#include "uMQTT_msg_resp.h"
+#include "uMQTT_client.h"
 
 #define MQTT_BROKER_IP        "127.0.0.1"
 #define MQTT_BROKER_PORT      1883
