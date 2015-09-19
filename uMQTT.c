@@ -163,7 +163,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
       /* the following is less that ideal since it requires 2 copies 
        * of the payload in memory.
        */
-      memcpy(&pkt->payload->data, &payload, pay_len);
+      memcpy(&pkt->payload->data, payload, pay_len);
 
       break;
 
@@ -205,7 +205,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     return 0;
   }
 
-  if (init_packet_payload(pkt, type, &payload, pay_len)) {
+  if (init_packet_payload(pkt, type, payload, pay_len)) {
     free_pkt(pkt);
     return 0;
   }
