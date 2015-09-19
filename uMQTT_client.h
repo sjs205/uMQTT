@@ -29,19 +29,23 @@
  * \param port The port with which to bind to.
  * \param sockfd The socket file descriptor of a connection instance.
  * \param serv_addr struct holding the address of the broker.
+ * \param conn_state Current connection state.
  */
 struct broker_conn {
   char ip[16];
   int port;
   int sockfd;
   struct sockaddr_in serv_addr; 
+
+  uint8_t state;
 };
 
 void init_connection(struct broker_conn **conn_p, char *ip,
     unsigned int ip_len,  unsigned int port);
-void init_raw_packet(struct raw_pkt **pkt_p);
-int broker_connect(struct broker_conn *conn);
+umqtt_ret broker_connect(struct broker_conn *conn);
+umqtt_ret broker_disconnect(struct broker_conn *conn);
 size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 size_t read_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 void print_memory_bytes_hex(void *ptr, size_t len);
 void print_packet(struct mqtt_packet *pkt);
+void free_connection(struct broker_conn *conn);

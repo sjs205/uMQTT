@@ -40,19 +40,7 @@ int main() {
   
   printf("New broker connection:\nip: %s port: %d\n", conn->ip, conn->port);
 
-  /* connect packet */
-
-  struct mqtt_packet *con_pkt = construct_default_packet(CONNECT, 0, 0);
-
-  print_packet(con_pkt);
-
   broker_connect(conn);
-
-  send_packet(conn, (struct raw_pkt *)con_pkt->raw.buf);
-//rx_pkt->len = read_packet(conn, rx_pkt);
-
-  printf("CONNECT packet sent...\n");
-  free_pkt(con_pkt);
 
   /* publish packet */
   struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH,
@@ -61,10 +49,10 @@ int main() {
   print_packet(pub_pkt);
   send_packet(conn, (struct raw_pkt *)pub_pkt->raw.buf);
 
-  free_pkt(pub_pkt);
+  free_packet(pub_pkt);
 
-  do {
+  broker_disconnect(conn);
 
-  } while (1);
+  return 0;
 }
 

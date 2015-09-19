@@ -38,7 +38,7 @@ umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
 
   if (!(pkt = calloc(1, sizeof(struct mqtt_packet)))) {
     printf("Error: Allocating space for MQTT packet failed.\n");
-    free_pkt(pkt);
+    free_packet(pkt);
     return UMQTT_MEM_ERROR;
   }
 
@@ -167,6 +167,12 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 
       break;
 
+    case PINGREQ:
+    case PINGRESP:
+    case DISCONNECT:
+
+      break;
+
     default:
       printf("Error: MQTT packet type not currently supported.\n");
 
@@ -191,22 +197,22 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
   struct mqtt_packet *pkt = '\0';
 
   if (init_packet(&pkt)) {
-    free_pkt(pkt);
+    free_packet(pkt);
     return 0;
   }
 
   if (init_packet_fixed_header(pkt, type)) {
-    free_pkt(pkt);
+    free_packet(pkt);
     return 0;
   }
 
   if (init_packet_variable_header(pkt, type)) {
-    free_pkt(pkt);
+    free_packet(pkt);
     return 0;
   }
 
   if (init_packet_payload(pkt, type, payload, pay_len)) {
-    free_pkt(pkt);
+    free_packet(pkt);
     return 0;
   }
 
@@ -243,6 +249,31 @@ unsigned int finalise_packet(struct mqtt_packet *pkt) {
   /* Free unused space */
 
   return delta;
+}
+
+/**
+ * \brief Function to disect incoming raw packet into struct mqtt_pkt
+ * \param pkt The mxtt_packet to disect.
+ */
+void disect_raw_packet(struct mqtt_packet *pkt) {
+  /* assign fixed header */
+  pkt->fixed = (struct pkt_fixed_header *)&pkt->raw.buf;
+
+  /* size of fixed header */
+  pkt->len = decode_remaining_len(pkt);
+  pkt->fix_len =
+    required_remaining_len_bytes(pkt->len);
+
+  pkt->len += pkt->fix_len;
+
+  /* assign variable header */
+  pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
+  
+  /* assign payload */
+
+  /* reallocate/reduce packet size? */
+
+  return;
 }
 
 /**
@@ -356,11 +387,10 @@ int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
  * \brief Function to free memory allocated to struct mqtt_packet.
  * \param pkt The packet to free.
  */
-void free_pkt(struct mqtt_packet *pkt) {
+void free_packet(struct mqtt_packet *pkt) {
   if (pkt) {
     free(pkt);
   }
 
   return;
 }
-  

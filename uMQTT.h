@@ -25,11 +25,11 @@
 #include <stdint.h>
 
 /* default defines - some can be overridden */
-#define MQTT_PROTO_NAME         "MQTT"
-#define MQTT_PROTO_LEVEL        0x04
-#define MQTT_CLIENT_ID          "uMQTT"
-#define UMQTT_DEFAULT_TOPIC      "uMQTT_PUB"
-#define UMQTT_MAX_PACKET_LEN     1024
+#define MQTT_PROTO_NAME           "MQTT"
+#define MQTT_PROTO_LEVEL          0x04
+#define MQTT_CLIENT_ID            "uMQTT"
+#define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
+#define UMQTT_MAX_PACKET_LEN      1024
 
 /**
  * \brief uMQTT return codes.
@@ -38,6 +38,9 @@ typedef enum {
   UMQTT_SUCCESS,
   UMQTT_ERROR,
   UMQTT_MEM_ERROR,
+  UMQTT_CONNECT_ERROR,
+  UMQTT_DISCONNECT_ERROR,
+  UMQTT_PACKET_ERROR,
 } umqtt_ret;
 
 /**
@@ -66,13 +69,13 @@ typedef enum {
  * \brief Connect return codes.
  */
 typedef enum {
-  CONN_ACC,
+  CONN_ACCEPTED,
   CONN_REF_IDENTIFIER_REJ,
   CONN_REF_SERVER_UNAVAIL,
   CONN_REF_BAD_USER_PASS,
   CONN_REF_NOT_AUTH,
   RESERVED
-} connect_ret_code;
+} connect_state;
 
 /**
  * \brief Struct to store utf-8 encoded strings, as required for text fields.
@@ -274,6 +277,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, uint8_t pay_len);
 unsigned int finalise_packet(struct mqtt_packet *pkt);
+void disect_raw_packet(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
@@ -282,4 +286,4 @@ int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
 uint8_t required_remaining_len_bytes(unsigned int len);
 
 void memmove_back(uint8_t *mem, size_t delta, size_t n);
-void free_pkt(struct mqtt_packet *pkt);
+void free_packet(struct mqtt_packet *pkt);
