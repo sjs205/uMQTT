@@ -128,3 +128,20 @@ int read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
     error("ERROR reading socket");
   return n;
 }
+
+/**
+ * \brief Function to print memory in hex.
+ * \param ptr The memory to start printing.
+ * \param len The number of bytes to print.
+ */
+void print_memory_bytes_hex(void *ptr, unsigned int len) {
+  int i;
+
+  printf("%d bytes starting at address 0x%X\n", len, &ptr);
+  for (i = 0; i < len; i++) {
+    printf("0x%02X ", ((uint8_t *)ptr)[i]);
+  }
+  printf("\n");
+
+  return;
+}

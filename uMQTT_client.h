@@ -56,3 +56,4 @@ void init_raw_packet(struct raw_pkt **pkt_p);
 int broker_connect(struct broker_conn *conn);
 int send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 int read_packet(struct broker_conn *conn, struct raw_pkt *pkt);
+void print_memory_bytes_hex(void *ptr, unsigned int len);

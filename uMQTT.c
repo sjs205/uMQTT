@@ -309,23 +309,6 @@ int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
 }
 
 /**
- * \brief Function to print memory in hex.
- * \param ptr The memory to start printing.
- * \param len The number of bytes to print.
- */
-void print_memory_bytes_hex(void *ptr, unsigned int len) {
-  int i;
-
-  printf("%d bytes starting at address 0x%X\n", len, &ptr);
-  for (i = 0; i < len; i++) {
-    printf("0x%02X ", ((uint8_t *)ptr)[i]);
-  }
-  printf("\n");
-
-  return;
-}
-
-/**
  * \brief Function to free memory allocated to struct mqtt_packet.
  * \param pkt The packet to free.
  */

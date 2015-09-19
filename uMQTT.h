@@ -278,4 +278,3 @@ void free_pkt_payload(struct pkt_payload *pld);
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
 int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf, uint16_t len);
-void print_memory_bytes_hex(void *ptr, unsigned int len);
