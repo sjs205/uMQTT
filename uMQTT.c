@@ -42,6 +42,7 @@ umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
     return UMQTT_MEM_ERROR;
   }
 
+  pkt->raw.len = &pkt->len;
   *pkt_p = pkt;
 
   return UMQTT_SUCCESS;
@@ -57,18 +58,14 @@ umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
 umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type) {
 
-  /* allocate fixed header memory */
-  pkt->fix_len = sizeof(struct pkt_fixed_header);
-  if (!(pkt->fixed = calloc(1, pkt->fix_len))) {
-    printf("Error: Allocating space for fixed header failed.\n");
-    free_pkt_fixed_header(pkt->fixed);
+  /* allocate initial fixed header length */
+  pkt->fix_len =
+    required_remaining_len_bytes(UMQTT_MAX_PACKET_LEN) + 1;
 
-    return UMQTT_MEM_ERROR;
-  }
+  /* alloate fixed header */
+  pkt->fixed = (struct pkt_fixed_header *)&pkt->raw.buf[0];
 
   pkt->fixed->generic.type = type;
-
-  encode_remaining_len(pkt, 0);
 
   pkt->len = pkt->fix_len;
 
@@ -85,43 +82,29 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
 umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type) {
 
+  /* allocate variable header */
+  pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
+
   switch (type) {
     case CONNECT:
 
-      /* variable header */
+      /* variable header len */
       pkt->var_len = sizeof(struct connect_variable_header);
 
-      /* allocate variable header */
-      if (!(pkt->variable = calloc(1, pkt->var_len))) {
-        printf("Error: Allocating space for variable header failed.\n");
-        free_pkt_variable_header(pkt->variable);
-
-        return UMQTT_MEM_ERROR;
-      }
-
       /* defaults */
-      pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8); //swap endianess
+      pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8); 
       memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
       pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
 
       break;
 
     case PUBLISH:
-      /* variable header - default action does not include pkt_id => qos = 0 */
-      pkt->var_len = (sizeof(struct utf8_enc_str) - 1) +
-        (sizeof(MQTT_DEFAULT_TOPIC) - 1);
-
-      /* allocate variable header */
-      if (!(pkt->variable = calloc(1, pkt->var_len))) {
-        printf("Error: Allocating space for variable header failed.\n");
-        free_pkt_variable_header(pkt->variable);
-
-        return UMQTT_MEM_ERROR;
-      }
+      /* variable header - default action => qos = 0 */
 
       /* defaults */
-      pkt->pay_len = encode_utf8_string(&pkt->variable->publish.topic_name,
-          MQTT_DEFAULT_TOPIC, (sizeof(MQTT_DEFAULT_TOPIC) - 1));
+      pkt->var_len = encode_utf8_string(
+          &pkt->variable->publish.topic_name,UMQTT_DEFAULT_TOPIC,
+          (sizeof(UMQTT_DEFAULT_TOPIC) - 1));
 
       if (pkt->fixed->publish.qos) {
         /* set packet identifier */
@@ -140,9 +123,6 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 
       return UMQTT_ERROR;
   }
-
-  /* Remaining length currently zero */
-  encode_remaining_len(pkt, pkt->var_len);
 
   pkt->len = pkt->fix_len + pkt->var_len;
 
@@ -164,16 +144,12 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, uint8_t pay_len) {
 
+  /* allocate payload */
+  pkt->payload =
+    (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
+
   switch (type) {
     case CONNECT:
-
-      /* allocate payload memory */
-      if (!(pkt->payload = calloc(1, MQTT_MAX_PAYLOAD_LEN))) {
-        printf("Error: Allocating space for payload.\n");
-        free_pkt_payload(pkt->payload);
-
-        return UMQTT_MEM_ERROR;
-      }
 
       pkt->pay_len = encode_utf8_string(
           (struct utf8_enc_str *)&pkt->payload->data, MQTT_CLIENT_ID,
@@ -183,7 +159,11 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 
     case PUBLISH:
       pkt->pay_len = pay_len;
-      pkt->payload = (struct pkt_payload *)payload;
+
+      /* the following is less that ideal since it requires 2 copies 
+       * of the payload in memory.
+       */
+      memcpy(&pkt->payload->data, &payload, pay_len);
 
       break;
 
@@ -194,8 +174,6 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
   }
 
   pkt->len += pkt->pay_len;
-
-  encode_remaining_len(pkt, (pkt->var_len + pkt->pay_len));
 
   return UMQTT_SUCCESS;
 }
@@ -217,23 +195,89 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     return 0;
   }
 
-  if (init_packet_fixed_header(pkt, CONNECT)) {
+  if (init_packet_fixed_header(pkt, type)) {
     free_pkt(pkt);
     return 0;
   }
 
-  if (init_packet_variable_header(pkt, CONNECT)) {
+  if (init_packet_variable_header(pkt, type)) {
     free_pkt(pkt);
     return 0;
   }
 
-  if (init_packet_payload(pkt, CONNECT, '\0', 0)) {
+  if (init_packet_payload(pkt, type, &payload, pay_len)) {
     free_pkt(pkt);
     return 0;
   }
+
+  finalise_packet(pkt);
 
   return pkt;
+}
 
+/**
+ * \brief Function to cleanup mqtt_pkt removing any unused space and
+ *        ensuring memory is packed. 
+ * \param pkt The mxtt_packet to finalise.
+ * \return the number of bytes saved
+ */
+unsigned int finalise_packet(struct mqtt_packet *pkt) {
+  unsigned int fix_len = pkt->fix_len;
+  unsigned int delta = 0;
+
+  encode_remaining_len(pkt, (pkt->var_len + pkt->pay_len));
+
+  delta = fix_len - pkt->fix_len;
+  if (delta) {
+    /* need to shift data backwards to ensure packet is packed */
+    memmove_back(&pkt->raw.buf[delta], delta, pkt->var_len);
+    memmove_back(&pkt->raw.buf[delta + pkt->var_len], delta, pkt->pay_len);
+
+    /* reassign pointers to packet elements */
+    pkt->variable -= delta;
+    pkt->payload -= delta;
+
+    pkt->len -= delta;
+  }
+
+  /* Free unused space */
+
+  return delta;
+}
+
+/**
+ * \brief Function to move memory backwards - prefered over memmove
+ *        since this will copy memory to a temp location before copying
+ *        to the new location, thus taking upto 3xMEM
+ * \param dest Destination memory address - should be the start position
+ *        i.e., current_position - delta
+ * \param delta Number of positions to move memory backwards
+ */
+void memmove_back(uint8_t *mem, size_t delta, size_t n) {
+  int i;
+  if (mem) {
+    for (i = 0; i <= n; i++) {
+      mem[i] = mem[i + delta];
+    }
+  }
+
+  return;
+}
+
+/**
+ * \brief Function to calculate the number of bytes required to encode
+ *        the remaining length field of an MQTT packet,
+ * \param len The length that should be encoded.
+ */
+uint8_t required_remaining_len_bytes(unsigned int len) {
+  uint8_t i = 1;
+  do {
+    len /= 128;
+
+    i++;
+  } while (len > 0 && i < 5);
+
+  return i;
 }
 
 /**
@@ -244,7 +288,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
  * \param len The length that should be encoded.
  */
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
-  int i = 0;
+  uint8_t i = 0;
   do {
     pkt->fixed->remain_len[i] = len % 128;
     len /= 128;
@@ -268,7 +312,7 @@ void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
  * \return The length that should be encoded.
  */
 unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
-  int i = 0;
+  uint8_t i = 0;
   unsigned int len = 0;
   unsigned int product = 1;
   do {
@@ -314,56 +358,9 @@ int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
  */
 void free_pkt(struct mqtt_packet *pkt) {
   if (pkt) {
-    if (pkt->fixed) {
-      free(pkt->fixed);
-    }
-
-    if (pkt->variable) {
-      free(pkt->variable);
-    }
-
-    if (pkt->payload) {
-      free(pkt->variable);
-    }
-
     free(pkt);
   }
 
   return;
 }
   
-/**
- * \brief Function to free memory allocated to struct pkt_fixed_header.
- * \param fix The fixed header to free.
- */
-void free_pkt_fixed_header(struct pkt_fixed_header *fix) {
-  if (fix) {
-    free(fix);
-  }
-
-  return;
-}
-
-/**
- * \brief Function to free memory allocated to struct pkt_variable_header.
- * \param var The variable header to free.
- */
-void free_pkt_variable_header(struct pkt_variable_header *var) {
-  if (var) {
-    free(var);
-  }
-
-  return;
-}
-
-/**
- * \brief Function to free memory allocated to struct pkt_payload.
- * \param pld The payload to free.
- */
-void free_pkt_payload(struct pkt_payload *pld) {
-  if (pld) {
-    free(pld);
-  }
-
-  return;
-}

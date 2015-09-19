@@ -23,9 +23,6 @@
  *****************************************************************************/
 #include <netinet/in.h>
 
-#define TXRX_BUF_LEN    1024
-
-
 /**
  * \brief Struct to store an MQTT broker socket connection.
  * \param ip The ip address of the broker.
@@ -40,20 +37,11 @@ struct broker_conn {
   struct sockaddr_in serv_addr; 
 };
 
-/**
- * \brief Struct to store a TX/RX packet.
- * \param buf The TX/RX buffer.
- * \param len The number of valid bytes in the buffer, buf.
- */
-struct raw_pkt {
-  uint8_t buf[TXRX_BUF_LEN];
-  unsigned int len;
-};
-
 void init_connection(struct broker_conn **conn_p, char *ip,
     unsigned int ip_len,  unsigned int port);
 void init_raw_packet(struct raw_pkt **pkt_p);
 int broker_connect(struct broker_conn *conn);
-int send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
-int read_packet(struct broker_conn *conn, struct raw_pkt *pkt);
-void print_memory_bytes_hex(void *ptr, unsigned int len);
+size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
+size_t read_packet(struct broker_conn *conn, struct raw_pkt *pkt);
+void print_memory_bytes_hex(void *ptr, size_t len);
+void print_packet(struct mqtt_packet *pkt);

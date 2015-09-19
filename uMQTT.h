@@ -27,9 +27,9 @@
 /* default defines - some can be overridden */
 #define MQTT_PROTO_NAME         "MQTT"
 #define MQTT_PROTO_LEVEL        0x04
-#define MQTT_MAX_PAYLOAD_LEN    1024
 #define MQTT_CLIENT_ID          "uMQTT"
-#define MQTT_DEFAULT_TOPIC      "uMQTT_PUB"
+#define UMQTT_DEFAULT_TOPIC      "uMQTT_PUB"
+#define UMQTT_MAX_PACKET_LEN     1024
 
 /**
  * \brief uMQTT return codes.
@@ -224,7 +224,18 @@ struct pkt_variable_header {
  * \param data The raw payload data.
  */
 struct pkt_payload {
-  uint8_t *data;
+  uint8_t data;
+};
+
+/**
+ * \brief Struct to store a TX/RX packet.
+ * \param buf The TX/RX buffer.
+ * \param len The number of valid bytes in the buffer, buf. Pointer to
+ *        mqtt_packet->len;
+ */
+struct raw_pkt {
+  uint8_t buf[UMQTT_MAX_PACKET_LEN];
+  size_t *len;
 };
 
 /**
@@ -242,19 +253,12 @@ struct mqtt_packet {
   struct pkt_variable_header *variable;
   struct pkt_payload *payload;
 
-  uint8_t fix_len;
-  uint8_t var_len;
-  uint8_t pay_len;
-  uint16_t len;
-};
+  struct raw_pkt raw;
 
-/**
- * \brief Struct to store a raw packet.
- * \param length The packet length.
- * \param pkt Pointer to the actual packet.
- */
-struct raw_packet {
-  struct mqtt_packet *pkt;
+  uint8_t fix_len;
+  size_t var_len;
+  size_t pay_len;
+  size_t len;
 };
 
 /*
@@ -269,12 +273,13 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, uint8_t pay_len);
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, uint8_t pay_len);
-
-void free_pkt(struct mqtt_packet *pkt);
-void free_pkt_fixed_header(struct pkt_fixed_header *fix);
-void free_pkt_variable_header(struct pkt_variable_header *var);
-void free_pkt_payload(struct pkt_payload *pld);
+unsigned int finalise_packet(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
-int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf, uint16_t len);
+int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
+    uint16_t len);
+uint8_t required_remaining_len_bytes(unsigned int len);
+
+void memmove_back(uint8_t *mem, size_t delta, size_t n);
+void free_pkt(struct mqtt_packet *pkt);

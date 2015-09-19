@@ -109,8 +109,8 @@ int broker_connect(struct broker_conn *conn) {
  * \param conn Pointer to the croker_conn struct.
  * \param pkt Pointer to the packet to be sent.
  */
-int send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  int n = write(conn->sockfd,pkt->buf, pkt->len); //strlen(pkt->buf));
+size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+  size_t n = write(conn->sockfd,pkt->buf, *pkt->len); //strlen(pkt->buf));
   if (n < 0) 
     error("ERROR writing to socket");
   return n;
@@ -121,8 +121,8 @@ int send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
  * \param conn Pointer to the croker_conn struct.
  * \param pkt Pointer to the reciever buffer/packet.
  */
-int read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  int n = read(conn->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
+size_t read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+  size_t n = read(conn->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
     //write(conn-sockfd,pkt->buf, pkt->len); //strlen(pkt->buf));
   if (n < 0) 
     error("ERROR reading socket");
@@ -134,8 +134,8 @@ int read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
  * \param ptr The memory to start printing.
  * \param len The number of bytes to print.
  */
-void print_memory_bytes_hex(void *ptr, unsigned int len) {
-  int i;
+void print_memory_bytes_hex(void *ptr, size_t len) {
+  size_t i;
 
   printf("%d bytes starting at address 0x%X\n", len, &ptr);
   for (i = 0; i < len; i++) {
@@ -144,4 +144,30 @@ void print_memory_bytes_hex(void *ptr, unsigned int len) {
   printf("\n");
 
   return;
+}
+
+/**
+ * \brief Function to print a packet.
+ * \param pkt Pointer to the packet to be printed
+ * \param len The number of bytes to print.
+ */
+void print_packet(struct mqtt_packet *pkt) {
+
+  printf("\nFixed header:\n");
+  printf("Length: %d\n", pkt->fix_len);
+  print_memory_bytes_hex((void *)pkt->fixed, pkt->fix_len);
+
+  printf("\nVariable header:\n");
+  printf("Length: %d\n", pkt->var_len);
+  print_memory_bytes_hex((void *)pkt->variable, pkt->var_len);
+
+  printf("\nPayload:\n");
+  printf("Length: %d\n", pkt->pay_len);
+  print_memory_bytes_hex((void *)&pkt->payload->data,
+      pkt->pay_len);
+
+  printf("\nTotal Length of new packet = %d\n", pkt->len);
+
+  printf("\nTX packet:\n");
+  print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
 }

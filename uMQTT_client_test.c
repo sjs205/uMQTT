@@ -40,93 +40,28 @@ int main() {
   
   printf("New broker connection:\nip: %s port: %d\n", conn->ip, conn->port);
 
-  /* connect */
+  /* connect packet */
 
   struct mqtt_packet *con_pkt = construct_default_packet(CONNECT, 0, 0);
 
-  printf("\nFixed header:\n");
-  printf("Length: %d\n", con_pkt->fix_len);
-  print_memory_bytes_hex((void *)con_pkt->fixed, con_pkt->fix_len);
-
-  printf("\nVariable header:\n");
-  printf("Length: %d\n", con_pkt->var_len);
-  print_memory_bytes_hex((void *)con_pkt->variable, con_pkt->var_len);
-
-  printf("\nPayload:\n");
-  printf("Length: %d\n", con_pkt->pay_len);
-  print_memory_bytes_hex((void *)&con_pkt->payload->data,
-      con_pkt->pay_len);
-
-  printf("\nTotal Length of new packet = %d\n", con_pkt->len);
+  print_packet(con_pkt);
 
   broker_connect(conn);
 
-  struct raw_pkt *tx_pkt, *rx_pkt;
-  init_raw_packet(&tx_pkt);
-  tx_pkt->len = con_pkt->len;
-  init_raw_packet(&rx_pkt);
+  send_packet(conn, (struct raw_pkt *)con_pkt->raw.buf);
+//rx_pkt->len = read_packet(conn, rx_pkt);
 
-  memcpy((void *)tx_pkt->buf, con_pkt->fixed, con_pkt->fix_len);
-  memcpy((void *)&tx_pkt->buf[con_pkt->fix_len], con_pkt->variable,
-      con_pkt->var_len);
-  memcpy((void *)&tx_pkt->buf[con_pkt->fix_len + con_pkt->var_len],
-      &con_pkt->payload->data, con_pkt->pay_len);
+  printf("CONNECT packet sent...\n");
+  free_pkt(con_pkt);
 
-  printf("\nTX packet:\n");
-  print_memory_bytes_hex((void *)tx_pkt->buf, tx_pkt->len);
+  /* publish packet */
+  struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH,
+      "uMQTT test PUBLISH packet", sizeof("uMQTT test PUBLISH packet"));
 
+  print_packet(pub_pkt);
+  send_packet(conn, (struct raw_pkt *)pub_pkt->raw.buf);
 
-  send_packet(conn, tx_pkt);
-
-  rx_pkt->len = read_packet(conn, rx_pkt);
-  printf("\nRX packet:\n");
-  print_memory_bytes_hex((void *)rx_pkt->buf, rx_pkt->len);
-
-  /* publish */
-  struct mqtt_packet *pub_pkt = '\0';
-
-  init_packet(&pub_pkt);
-
-  init_packet_fixed_header(pub_pkt, PUBLISH);
-  init_packet_variable_header(pub_pkt, PUBLISH);
-
-  init_packet_payload(pub_pkt, PUBLISH, "hi", 2);
-
-  printf("\nFixed header:\n");
-  printf("Length: %d\n", pub_pkt->fix_len);
-  print_memory_bytes_hex((void *)pub_pkt->fixed, pub_pkt->fix_len);
-
-  printf("\nVariable header:\n");
-  printf("Length: %d\n", pub_pkt->var_len);
-  print_memory_bytes_hex((void *)pub_pkt->variable, pub_pkt->var_len);
-
-  
-  printf("\nPayload:\n");
-  printf("Length: %d\n", pub_pkt->pay_len);
-  print_memory_bytes_hex((void *)&pub_pkt->payload->data,
-      pub_pkt->pay_len);
-
-  printf("\nTotal Length of new packet = %d\n", pub_pkt->len);
-
-  tx_pkt->len = pub_pkt->len;
-
-  memcpy((void *)tx_pkt->buf, pub_pkt->fixed, pub_pkt->fix_len);
-  memcpy((void *)&tx_pkt->buf[pub_pkt->fix_len], pub_pkt->variable,
-      pub_pkt->var_len);
-  memcpy((void *)&tx_pkt->buf[pub_pkt->fix_len + pub_pkt->var_len],
-      &pub_pkt->payload->data, pub_pkt->pay_len);
-
-  printf("\nTX packet:\n");
-  print_memory_bytes_hex((void *)tx_pkt->buf, tx_pkt->len);
-
-
-  send_packet(conn, tx_pkt);
-
-  memset(rx_pkt, 0, 1024);
-  rx_pkt->len = read_packet(conn, rx_pkt);
-  printf("\nRX packet:\n");
-  print_memory_bytes_hex((void *)rx_pkt->buf, rx_pkt->len);
-  
+  free_pkt(pub_pkt);
 
   do {
 
