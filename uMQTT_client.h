@@ -1,7 +1,6 @@
 /******************************************************************************
- * File: uMQTT_msg_resp.h
- * Description: Functions to send a message and wait for a response from an
- * MQTT socket connection.
+ * File: uMQTT_client.c
+ * Description: Functions to implement socket based client.
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014

@@ -1,7 +1,6 @@
 /******************************************************************************
- * File: uMQTT_msg_resp.c
- * Description: Functions to send a message and wait for a response from an
- * MQTT socket connection.
+ * File: uMQTT_client.c
+ * Description: Functions to implement socket based client.
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
@@ -34,7 +33,7 @@
 #include <arpa/inet.h> 
 
 #include "uMQTT.h"
-#include "uMQTT_msg_resp.h"
+#include "uMQTT_client.h"
 
 /**
  * \brief Function to allocate memory for a broker connection struct.
@@ -75,6 +74,10 @@ void init_raw_packet(struct raw_pkt **pkt_p) {
   return;
 }
 
+/**
+ * \brief Function to connect to broker socket.
+ * \param conn Pointer to the broker_conn struct.
+ */
 int broker_connect(struct broker_conn *conn) {
 
   if ((conn->sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -101,6 +104,11 @@ int broker_connect(struct broker_conn *conn) {
   return conn->sockfd;
 }
 
+/**
+ * \brief Function to send packet to the to the broker socket.
+ * \param conn Pointer to the croker_conn struct.
+ * \param pkt Pointer to the packet to be sent.
+ */
 int send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   int n = write(conn->sockfd,pkt->buf, pkt->len); //strlen(pkt->buf));
   if (n < 0) 
@@ -108,6 +116,11 @@ int send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   return n;
 }
 
+/**
+ * \brief Function to recieve packetfrom the broker socket.
+ * \param conn Pointer to the croker_conn struct.
+ * \param pkt Pointer to the reciever buffer/packet.
+ */
 int read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   int n = read(conn->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
     //write(conn-sockfd,pkt->buf, pkt->len); //strlen(pkt->buf));
