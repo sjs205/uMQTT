@@ -167,7 +167,7 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
 size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   size_t n = write(conn->sockfd,pkt->buf, *pkt->len); //strlen(pkt->buf));
   if (n < 0) 
-    error("ERROR writing to socket");
+    printf("ERROR: writing to socket\n");
   return n;
 }
 
@@ -180,7 +180,7 @@ size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
 size_t read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   size_t n = read(conn->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
   if (n < 0) 
-    error("ERROR reading socket");
+    printf("ERROR: reading from socket\n");
   return n;
 }
 
@@ -192,7 +192,7 @@ size_t read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
 void print_memory_bytes_hex(void *ptr, size_t len) {
   size_t i;
 
-  printf("%d bytes starting at address 0x%X\n", len, &ptr);
+  printf("%zu bytes starting at address 0x%p\n", len, &ptr);
   for (i = 0; i < len; i++) {
     printf("0x%02X ", ((uint8_t *)ptr)[i]);
   }
@@ -209,19 +209,19 @@ void print_memory_bytes_hex(void *ptr, size_t len) {
 void print_packet(struct mqtt_packet *pkt) {
 
   printf("\nFixed header:\n");
-  printf("Length: %d\n", pkt->fix_len);
+  printf("Length: %zu\n", pkt->fix_len);
   print_memory_bytes_hex((void *)pkt->fixed, pkt->fix_len);
 
   printf("\nVariable header:\n");
-  printf("Length: %d\n", pkt->var_len);
+  printf("Length: %zu\n", pkt->var_len);
   print_memory_bytes_hex((void *)pkt->variable, pkt->var_len);
 
   printf("\nPayload:\n");
-  printf("Length: %d\n", pkt->pay_len);
+  printf("Length: %zu\n", pkt->pay_len);
   print_memory_bytes_hex((void *)&pkt->payload->data,
       pkt->pay_len);
 
-  printf("\nTotal Length of new packet = %d\n", pkt->len);
+  printf("\nTotal Length of new packet = %zu\n", pkt->len);
 
   printf("\nTX packet:\n");
   print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);

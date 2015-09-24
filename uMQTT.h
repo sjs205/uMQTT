@@ -258,7 +258,7 @@ struct mqtt_packet {
 
   struct raw_pkt raw;
 
-  uint8_t fix_len;
+  size_t fix_len;
   size_t var_len;
   size_t pay_len;
   size_t len;

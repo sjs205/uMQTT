@@ -28,7 +28,9 @@
 #include "uMQTT.h"
 #include "uMQTT_client.h"
 
-#define MQTT_BROKER_IP        "127.0.0.1"
+/* ip of test.mosquitto.org - need to perform dns lookup 
+   using gethostbyname */
+#define MQTT_BROKER_IP        "85.119.83.194"
 #define MQTT_BROKER_PORT      1883
 
 int main() {
@@ -44,7 +46,7 @@ int main() {
 
   /* publish packet */
   struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH,
-      "uMQTT test PUBLISH packet", sizeof("uMQTT test PUBLISH packet"));
+      (uint8_t *)"uMQTT test PUBLISH packet", sizeof("uMQTT test PUBLISH packet"));
 
   print_packet(pub_pkt);
   send_packet(conn, (struct raw_pkt *)pub_pkt->raw.buf);
