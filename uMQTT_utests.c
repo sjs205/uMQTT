@@ -1,6 +1,6 @@
 /******************************************************************************
- * File: uMQTT_test.c
- * Description: MicroMQTT (uMQTT) library tests.
+ * File: uMQTT_utests.c
+ * Description: MicroMQTT (uMQTT) library unit tests.
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
