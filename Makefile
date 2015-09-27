@@ -1,17 +1,28 @@
-CC=gcc
-CFLAGS=-c -Wall -Werror
-LDFLAGS=
-SOURCES= uMQTT_client_test.c uMQTT_client.c uMQTT.c
-OBJECTS=$(SOURCES:.c=.o)
-EXECUTABLE=umqtt
+SRCDIR = $(CURDIR)/src
+BINDIR = $(CURDIR)/bin
+OBJDIR = $(BINDIR)/obj
+SRCDIR = $(CURDIR)/src
+INCDIR = $(SRCDIR)/inc
 
-all: $(SOURCES) $(EXECUTABLE)
-	
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+CC = gcc
+CFLAGS = -c -Wall -Werror -I$(INCDIR)
+LDFLAGS =
 
-.c.o:
-	$(CC) $(CFLAGS) $< -o $@
+MKDIR_P = mkdir -p
 
+export
+
+all: setup srcs tests
+
+setup:
+	${MKDIR_P} ${OBJDIR}
+
+srcs: setup
+	$(MAKE) -C src/ srcs
+
+tests: srcs setup
+	$(MAKE) -C src/tests/ tests
+
+.PHONY: clean
 clean:
-	rm *.o $(EXECUTABLE)	
+	rm -rf $(BINDIR)

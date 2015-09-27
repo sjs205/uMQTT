@@ -4,7 +4,7 @@
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
- * 
+ *
  * This file is part of uMQTT.
  *
  * uMQTT is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h> 
+#include <arpa/inet.h>
 
 #include "uMQTT.h"
 #include "uMQTT_client.h"
@@ -50,7 +50,7 @@ void init_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,
   /* the following should be dynamic */
   conn->serv_addr.sin_family = AF_INET;
   conn->port = port;
-  conn->serv_addr.sin_port = htons(conn->port); 
+  conn->serv_addr.sin_port = htons(conn->port);
   memcpy(conn->ip, ip, ip_len);
 
   *conn_p = conn;
@@ -70,7 +70,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   {
     printf("Error: Could not create socket\n");
     return UMQTT_CONNECT_ERROR;
-  } 
+  }
 
   /* convert ip address to binary */
   if (inet_pton(conn->serv_addr.sin_family, conn->ip,
@@ -78,26 +78,26 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   {
     printf("ERROR: inet_pton error occured\n");
     return UMQTT_CONNECT_ERROR;
-  } 
+  }
 
   if (connect(conn->sockfd, (struct sockaddr *)&conn->serv_addr,
         sizeof(conn->serv_addr)) < 0)
   {
     printf("Error: Connect Failed\n");
     return UMQTT_CONNECT_ERROR;
-  } 
+  }
 
   /* send connect packet */
   struct mqtt_packet *pkt = construct_default_packet(CONNECT, 0, 0);
   size_t ret = send_packet(conn, &pkt->raw);
 
   free_packet(pkt);
-  
+
   if (!ret) {
     printf("\n Error:Connect Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
   }
-  
+
   /* get response */
   struct mqtt_packet *pkt_resp;
   if (init_packet(&pkt_resp)) {
@@ -166,7 +166,7 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
  */
 size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   size_t n = write(conn->sockfd,pkt->buf, *pkt->len); //strlen(pkt->buf));
-  if (n < 0) 
+  if (n < 0)
     printf("ERROR: writing to socket\n");
   return n;
 }
@@ -179,7 +179,7 @@ size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
  */
 size_t read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   size_t n = read(conn->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
-  if (n < 0) 
+  if (n < 0)
     printf("ERROR: reading from socket\n");
   return n;
 }

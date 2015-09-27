@@ -5,7 +5,7 @@
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
- * 
+ *
  * This file is part of uMQTT.
  *
  * uMQTT is free software: you can redistribute it and/or modify
@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "uMQTT.h"
+#include "inc/uMQTT.h"
 
 /**
  * \brief Function to allocate memory for an mqtt packet.
@@ -92,7 +92,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       pkt->var_len = sizeof(struct connect_variable_header);
 
       /* defaults */
-      pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8); 
+      pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8);
       memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
       pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
 
@@ -133,7 +133,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
  * \brief Function to allocate memory for mqtt packet payload.
  *        NOTE: Currently if the payload type = PUBLISH, *payload
           pointer is substituted into the pkt->payload. In the
-          future, it may be better to actually copy this data to a 
+          future, it may be better to actually copy this data to a
           new payload data struct.
  * \param pkt Pointer to the address of the packet containing payload.
  * \param type The type of payload to be created.
@@ -160,7 +160,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     case PUBLISH:
       pkt->pay_len = pay_len;
 
-      /* the following is less that ideal since it requires 2 copies 
+      /* the following is less that ideal since it requires 2 copies
        * of the payload in memory.
        */
       memcpy(&pkt->payload->data, payload, pay_len);
@@ -223,7 +223,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
 
 /**
  * \brief Function to cleanup mqtt_pkt removing any unused space and
- *        ensuring memory is packed. 
+ *        ensuring memory is packed.
  * \param pkt The mxtt_packet to finalise.
  * \return the number of bytes saved
  */
@@ -268,7 +268,7 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
 
   /* assign variable header */
   pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
-  
+
   /* assign payload */
 
   /* reallocate/reduce packet size? */
