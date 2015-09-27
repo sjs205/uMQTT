@@ -1,10 +1,10 @@
 /******************************************************************************
  * File: uMQTT_client_test.c
- * Description: Program to create a test broker connection. 
+ * Description: Program to create a test broker connection.
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
- * 
+ *
  * This file is part of uMQTT.
  *
  * uMQTT is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@
 #include "uMQTT.h"
 #include "uMQTT_client.h"
 
-/* ip of test.mosquitto.org - need to perform dns lookup 
+/* ip of test.mosquitto.org - need to perform dns lookup
    using gethostbyname */
 #define MQTT_BROKER_IP        "85.119.83.194"
 #define MQTT_BROKER_PORT      1883
@@ -39,7 +39,7 @@ int main() {
   init_connection(&conn, MQTT_BROKER_IP, sizeof(MQTT_BROKER_IP), 1883);
   if (!conn)
     return -1;
-  
+
   printf("New broker connection:\nip: %s port: %d\n", conn->ip, conn->port);
 
   broker_connect(conn);

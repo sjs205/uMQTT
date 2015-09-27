@@ -4,7 +4,7 @@
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
- * 
+ *
  * This file is part of uMQTT.
  *
  * uMQTT is free software: you can redistribute it and/or modify
