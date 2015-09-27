@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "uMQTT.h"
+#include "inc/uMQTT.h"
 
 /**
  * \brief Function to allocate memory for an mqtt packet.

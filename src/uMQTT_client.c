@@ -32,8 +32,8 @@
 #include <errno.h>
 #include <arpa/inet.h> 
 
-#include "uMQTT.h"
-#include "uMQTT_client.h"
+#include "inc/uMQTT.h"
+#include "inc/uMQTT_client.h"
 
 /**
  * \brief Function to allocate memory for a broker connection struct.

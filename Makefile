@@ -1,30 +1,28 @@
+SRCDIR = $(CURDIR)/src
+BINDIR = $(CURDIR)/bin
+OBJDIR = $(BINDIR)/obj
+SRCDIR = $(CURDIR)/src
+INCDIR = $(SRCDIR)/inc
+
 CC = gcc
-CFLAGS = -c -Wall -Werror
+CFLAGS = -c -Wall -Werror -I$(INCDIR)
 LDFLAGS =
 
+MKDIR_P = mkdir -p
 
-EXE = umqtt
-TEST_EXE = umqtt_tests
+export
 
-tests: SRCS = uMQTT_utests.c uMQTT.c
-tests: EXE = umqtt_tests
-tests: OBJS = $(call OBJ $(SRCS))
+all: setup srcs tests
 
-all: SRCS = uMQTT_client_test.c uMQTT_client.c uMQTT.c
-all: EXE = umqtt
+setup:
+	${MKDIR_P} ${OBJDIR}
 
+srcs: setup
+	$(MAKE) -C src/ srcs
 
-all tests: $(SRCS) $(EXE)
-	
-OBJ = $(SRCS:.c=.o)
+tests: srcs setup
+	$(MAKE) -C src/tests/ tests
 
-.c.o:
-	$(CC) $(CFLAGS) $< -o $@
-
-$(EXE): $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ) -o $@
-
+.PHONY: clean
 clean:
-	rm -f *.o $(EXE) $(TEST_EXE)
-
-.PHONY: all
+	rm -rf $(BINDIR)
