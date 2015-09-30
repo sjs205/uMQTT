@@ -5,7 +5,7 @@ SRCDIR = $(CURDIR)/src
 INCDIR = $(SRCDIR)/inc
 
 CC = gcc
-CFLAGS = -c -Wall -Werror -I$(INCDIR)
+CFLAGS = -c -Wall -Werror -I$(INCDIR) -g3 -O0
 LDFLAGS =
 
 MKDIR_P = mkdir -p

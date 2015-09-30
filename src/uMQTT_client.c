@@ -1,6 +1,6 @@
 /******************************************************************************
  * File: uMQTT_client.c
- * Description: Functions to implement socket based client.
+ * Description: Functions to implement uMQTT client.
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
@@ -21,16 +21,9 @@
  * along with uMQTT.  If not, see <http://www.gnu.org/licenses/>.
  *
  *****************************************************************************/
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <arpa/inet.h>
 
 #include "uMQTT.h"
 #include "uMQTT_client.h"
@@ -39,7 +32,7 @@
  * \brief Function to allocate memory for a broker connection struct.
  * \param conn_p Pointer to the address of the new connection struct.
  */
-void init_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,  unsigned int port) {
+void init_connection(struct broker_conn **conn_p) {
   struct broker_conn *conn;
 
   if (!(conn = calloc(1, sizeof(struct broker_conn)))) {
@@ -47,13 +40,44 @@ void init_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,
     free_connection(conn);
   }
 
-  /* the following should be dynamic */
-  conn->serv_addr.sin_family = AF_INET;
-  conn->port = port;
-  conn->serv_addr.sin_port = htons(conn->port);
-  memcpy(conn->ip, ip, ip_len);
-
   *conn_p = conn;
+
+  return;
+}
+
+/**
+ * \brief Function to register implementation specific connection methods.
+ * \param connect_method Function pointer to the connect method.
+ * \param disconnect_method Function pointer to the disconnect method.
+ * \param send_method Function pointer to the send method.
+ * \param recieve_method Function pointer to the recieve method.
+ */
+void register_connection_methods(struct broker_conn *conn,
+    umqtt_ret (*connect_method)(struct broker_conn *),
+    umqtt_ret (*disconnect_method)(struct broker_conn *),
+    size_t (*send_method)(struct broker_conn *,  struct raw_pkt *),
+    size_t (*recieve_method)(struct broker_conn *, struct raw_pkt *),
+    void (*free_method)(struct broker_conn *)) {
+
+  if (connect_method) {
+    conn->connect_method = connect_method;
+  }
+
+  if (disconnect_method) {
+    conn->disconnect_method = disconnect_method;
+  }
+
+  if (send_method) {
+    conn->send_method = send_method;
+  }
+
+  if (recieve_method) {
+    conn->recieve_method = recieve_method;
+  }
+
+  if (free_method) {
+    conn->free_method = free_method;
+  }
 
   return;
 }
@@ -66,31 +90,14 @@ void init_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,
  */
 umqtt_ret broker_connect(struct broker_conn *conn) {
 
-  if ((conn->sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-  {
-    printf("Error: Could not create socket\n");
-    return UMQTT_CONNECT_ERROR;
-  }
-
-  /* convert ip address to binary */
-  if (inet_pton(conn->serv_addr.sin_family, conn->ip,
-        &conn->serv_addr.sin_addr) <= 0)
-  {
-    printf("ERROR: inet_pton error occured\n");
-    return UMQTT_CONNECT_ERROR;
-  }
-
-  if (connect(conn->sockfd, (struct sockaddr *)&conn->serv_addr,
-        sizeof(conn->serv_addr)) < 0)
-  {
-    printf("Error: Connect Failed\n");
+  if (conn->connect_method && conn->connect_method(conn)) {
+    printf("\n Error: No connect method registered\n");
     return UMQTT_CONNECT_ERROR;
   }
 
   /* send connect packet */
   struct mqtt_packet *pkt = construct_default_packet(CONNECT, 0, 0);
-  size_t ret = send_packet(conn, &pkt->raw);
-
+  size_t ret = conn->send_method(conn, &pkt->raw);
   free_packet(pkt);
 
   if (!ret) {
@@ -105,7 +112,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     return UMQTT_MEM_ERROR;
   }
 
-  pkt_resp->len = read_packet(conn, &pkt_resp->raw);
+  pkt_resp->len = conn->recieve_method(conn, &pkt_resp->raw);
   if (!pkt_resp->len) {
     printf("\n Error: Connect Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
@@ -145,43 +152,16 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
       return UMQTT_DISCONNECT_ERROR;
     }
 
-    if (!send_packet(conn, &pkt->raw)) {
+    if (!conn->send_method(conn, &pkt->raw)) {
       return UMQTT_PACKET_ERROR;
     }
   }
 
-  if (conn->sockfd) {
-    if (close(conn->sockfd)) {
-      return UMQTT_DISCONNECT_ERROR;
-    }
+  if (conn->disconnect_method(conn)) {
+    return UMQTT_DISCONNECT_ERROR;
   }
 
   return UMQTT_SUCCESS;
-}
-
-/**
- * \brief Function to send packet to the to the broker socket.
- * \param conn Pointer to the croker_conn struct.
- * \param pkt Pointer to the packet to be sent.
- */
-size_t send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  size_t n = write(conn->sockfd,pkt->buf, *pkt->len); //strlen(pkt->buf));
-  if (n < 0)
-    printf("ERROR: writing to socket\n");
-  return n;
-}
-
-/**
- * \brief Function to recieve packetfrom the broker socket.
- * \param conn Pointer to the croker_conn struct.
- * \param pkt Pointer to the reciever buffer/packet.
- * \return Number of bytes read.
- */
-size_t read_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  size_t n = read(conn->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
-  if (n < 0)
-    printf("ERROR: reading from socket\n");
-  return n;
 }
 
 /**

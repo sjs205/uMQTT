@@ -1,6 +1,6 @@
 /******************************************************************************
  * File: uMQTT_client_test.c
- * Description: Program to create a test broker connection.
+ * Description: Program to create a test Linux socket broker connection.
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
@@ -27,6 +27,7 @@
 
 #include "uMQTT.h"
 #include "uMQTT_client.h"
+#include "uMQTT_linux_client.h"
 
 /* ip of test.mosquitto.org - need to perform dns lookup
    using gethostbyname */
@@ -36,20 +37,24 @@
 int main() {
   struct broker_conn *conn;
 
-  init_connection(&conn, MQTT_BROKER_IP, sizeof(MQTT_BROKER_IP), 1883);
+  init_linux_socket_connection(&conn, MQTT_BROKER_IP, sizeof(MQTT_BROKER_IP),
+      1883);
   if (!conn)
     return -1;
 
-  printf("New broker connection:\nip: %s port: %d\n", conn->ip, conn->port);
+  struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
+
+  printf("New broker connection:\nip: %s port: %d\n", skt->ip, skt->port);
 
   broker_connect(conn);
 
   /* publish packet */
   struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH,
-      (uint8_t *)"uMQTT test PUBLISH packet", sizeof("uMQTT test PUBLISH packet"));
+      (uint8_t *)"uMQTT test PUBLISH packet",
+      sizeof("uMQTT test PUBLISH packet"));
 
   print_packet(pub_pkt);
-  send_packet(conn, (struct raw_pkt *)pub_pkt->raw.buf);
+  conn->send_method(conn, (struct raw_pkt *)pub_pkt->raw.buf);
 
   free_packet(pub_pkt);
 

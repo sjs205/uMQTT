@@ -1,3 +1,5 @@
+#ifndef UMQTT__H
+#define UMQTT__H
 /******************************************************************************
  * File: uMQTT.h
  * Description: MicroMQTT (uMQTT) library implementation suitable for
@@ -287,3 +289,4 @@ uint8_t required_remaining_len_bytes(unsigned int len);
 
 void memmove_back(uint8_t *mem, size_t delta, size_t n);
 void free_packet(struct mqtt_packet *pkt);
+#endif          /* UMQTT__H */

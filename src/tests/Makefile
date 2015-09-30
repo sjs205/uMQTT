@@ -1,4 +1,6 @@
-CLIENT_TEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o
+CLIENT_TEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o \
+									 $(OBJDIR)/uMQTT_linux_client.o
+
 UMQTT_UTEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o
 
 tests: uMQTT_client_test uMQTT_tests
