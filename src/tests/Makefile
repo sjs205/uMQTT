@@ -1,14 +1,22 @@
-CLIENT_TEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o \
-									 $(OBJDIR)/uMQTT_linux_client.o
+UMQTT_PUB_TEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o \
+                      $(OBJDIR)/uMQTT_linux_client.o $(OBJDIR)/uMQTT_helper.o
 
-UMQTT_UTEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o
+UMQTT_UTEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o \
+                   $(OBJDIR)/uMQTT_helper.o
 
-tests: uMQTT_client_test uMQTT_tests
+UMQTT_PRINT_PKTS_OBJS = $(OBJDIR)/uMQTT.o $(OBJDIR)/uMQTT_helper.o
 
-uMQTT_client_test:
+tests: uMQTT_pub_test uMQTT_tests uMQTT_print_packets
+
+uMQTT_pub_test:
 	$(CC) $(CFLAGS) $@.c -o $(OBJDIR)/$@.o
-	$(CC) $(LDFLAGS) $(CLIENT_TEST_OBJS) $(OBJDIR)/$@.o -o $(BINDIR)/$@
+	$(CC) $(LDFLAGS) $(UMQTT_PUB_TEST_OBJS) $(OBJDIR)/$@.o -o $(BINDIR)/$@
 
 uMQTT_tests:
 	$(CC) $(CFLAGS) $@.c -o $(OBJDIR)/$@.o
 	$(CC) $(LDFLAGS) $(UMQTT_UTEST_OBJS) $(OBJDIR)/$@.o -o $(BINDIR)/$@
+
+uMQTT_print_packets:
+	$(CC) $(CFLAGS) $@.c -o $(OBJDIR)/$@.o
+	$(CC) $(LDFLAGS) $(UMQTT_PRINT_PKTS_OBJS) $(OBJDIR)/$@.o -o $(BINDIR)/$@
+

@@ -165,49 +165,6 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
 }
 
 /**
- * \brief Function to print memory in hex.
- * \param ptr The memory to start printing.
- * \param len The number of bytes to print.
- */
-void print_memory_bytes_hex(void *ptr, size_t len) {
-  size_t i;
-
-  printf("%zu bytes starting at address 0x%p\n", len, &ptr);
-  for (i = 0; i < len; i++) {
-    printf("0x%02X ", ((uint8_t *)ptr)[i]);
-  }
-  printf("\n");
-
-  return;
-}
-
-/**
- * \brief Function to print a packet.
- * \param pkt Pointer to the packet to be printed
- * \param len The number of bytes to print.
- */
-void print_packet(struct mqtt_packet *pkt) {
-
-  printf("\nFixed header:\n");
-  printf("Length: %zu\n", pkt->fix_len);
-  print_memory_bytes_hex((void *)pkt->fixed, pkt->fix_len);
-
-  printf("\nVariable header:\n");
-  printf("Length: %zu\n", pkt->var_len);
-  print_memory_bytes_hex((void *)pkt->variable, pkt->var_len);
-
-  printf("\nPayload:\n");
-  printf("Length: %zu\n", pkt->pay_len);
-  print_memory_bytes_hex((void *)&pkt->payload->data,
-      pkt->pay_len);
-
-  printf("\nTotal Length of new packet = %zu\n", pkt->len);
-
-  printf("\nTX packet:\n");
-  print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
-}
-
-/**
  * \brief Function to free memory allocated to struct broker_conn.
  * \param conn The connection to free.
  */

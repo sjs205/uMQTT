@@ -26,6 +26,7 @@
 
 #include "uMQTT.h"
 #include "uMQTT_client.h"
+#include "uMQTT_helper.h"
 
 /**
  * \brief Function to test the encoding and decoding of the remaining packet
@@ -86,8 +87,7 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
     return delta;
   }
 
-  /* Would be nice if we printed the packet type by name rather than number */
-  printf("Comparing %d type packets:\n", (int)pkt1->fixed->generic.type);
+  printf("Comparing %s type packets:\n",get_type_string(pkt1->fixed->generic.type));
 
   if (delta) {
     delta = (delta < 0) ? delta * -1 : delta;
@@ -116,7 +116,7 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
 /**
  * \brief Fuction to create manual control packets with which to compare packet
  *        creation functions.
- * 
+ *
  */
 struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
 

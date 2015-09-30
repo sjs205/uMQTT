@@ -1,6 +1,7 @@
 /******************************************************************************
- * File: uMQTT_client_test.c
- * Description: Program to create a test Linux socket broker connection.
+ * File: uMQTT_print_packets.c
+ * Description: Program to create and print the default packets supported
+ *              by uMQTT.
  * Author: Steven Swann - swannonline@googlemail.com
  *
  * Copyright (c) swannonline, 2013-2014
@@ -26,39 +27,48 @@
 #include <string.h>
 
 #include "uMQTT.h"
-#include "uMQTT_client.h"
-#include "uMQTT_linux_client.h"
-
-/* ip of test.mosquitto.org - need to perform dns lookup
-   using gethostbyname */
-#define MQTT_BROKER_IP        "85.119.83.194"
-#define MQTT_BROKER_PORT      1883
+#include "uMQTT_helper.h"
 
 int main() {
-  struct broker_conn *conn;
 
-  init_linux_socket_connection(&conn, MQTT_BROKER_IP, sizeof(MQTT_BROKER_IP),
-      1883);
-  if (!conn)
-    return -1;
+  struct mqtt_packet *pkt;
 
-  struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
+  /* connect packet */
+  pkt = construct_default_packet(CONNECT, 0, 0);
 
-  printf("New broker connection:\nip: %s port: %d\n", skt->ip, skt->port);
+  print_packet(pkt);
 
-  broker_connect(conn);
+  free_packet(pkt);
 
   /* publish packet */
-  struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH,
+  pkt = construct_default_packet(PUBLISH,
       (uint8_t *)"uMQTT test PUBLISH packet",
       sizeof("uMQTT test PUBLISH packet"));
 
-  print_packet(pub_pkt);
-  conn->send_method(conn, (struct raw_pkt *)pub_pkt->raw.buf);
+  print_packet(pkt);
 
-  free_packet(pub_pkt);
+  free_packet(pkt);
 
-  broker_disconnect(conn);
+  /* pingreq packet */
+  pkt = construct_default_packet(PINGREQ, 0, 0);
+
+  print_packet(pkt);
+
+  free_packet(pkt);
+
+  /* pingresp packet */
+  pkt = construct_default_packet(PINGRESP, 0, 0);
+
+  print_packet(pkt);
+
+  free_packet(pkt);
+
+  /* disconnect packet */
+  pkt = construct_default_packet(DISCONNECT, 0, 0);
+
+  print_packet(pkt);
+
+  free_packet(pkt);
 
   return 0;
 }

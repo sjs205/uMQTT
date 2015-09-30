@@ -33,8 +33,6 @@
 #include <arpa/inet.h>
 
 #include "uMQTT_linux_client.h"
-#include "uMQTT.h"
-#include "uMQTT_client.h"
 
 /**
  * \brief Function to initialise socket based broker connection struct.

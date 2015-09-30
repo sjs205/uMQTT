@@ -57,7 +57,5 @@ void register_connection_methods(struct broker_conn *conn,
     void (*free_method)(struct broker_conn *));
 umqtt_ret broker_connect(struct broker_conn *conn);
 umqtt_ret broker_disconnect(struct broker_conn *conn);
-void print_memory_bytes_hex(void *ptr, size_t len);
-void print_packet(struct mqtt_packet *pkt);
 void free_connection(struct broker_conn *conn);
 #endif          /* UMQTT_CLIENT__H */
