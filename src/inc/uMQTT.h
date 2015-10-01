@@ -274,10 +274,13 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type);
 umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type);
+umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic,
+    size_t topic_len);
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
-    uint8_t *payload, uint8_t pay_len);
+    uint8_t *payload, size_t pay_len);
+struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
-    uint8_t *payload, uint8_t pay_len);
+    uint8_t *payload, size_t pay_len);
 unsigned int finalise_packet(struct mqtt_packet *pkt);
 void disect_raw_packet(struct mqtt_packet *pkt);
 

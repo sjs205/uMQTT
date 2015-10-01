@@ -102,13 +102,8 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       /* variable header - default action => qos = 0 */
 
       /* defaults */
-      pkt->var_len = encode_utf8_string(
-          &pkt->variable->publish.topic_name,UMQTT_DEFAULT_TOPIC,
+      set_publish_variable_header(pkt, UMQTT_DEFAULT_TOPIC,
           (sizeof(UMQTT_DEFAULT_TOPIC) - 1));
-
-      if (pkt->fixed->publish.qos) {
-        /* set packet identifier */
-      }
 
       break;
 
@@ -130,6 +125,24 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 }
 
 /**
+ * \brief Function to set the variable header of a PUBLISH packet.
+ * \param topic The topic for which the message should be published.
+ * \param topic_len The length of the topic.
+ */
+umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic,
+    size_t topic_len) {
+
+      pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic_name, topic, topic_len);
+
+      if (pkt->fixed->publish.qos) {
+        /* set packet identifier */
+      }
+
+  return UMQTT_SUCCESS;
+}
+
+
+/**
  * \brief Function to allocate memory for mqtt packet payload.
  *        NOTE: Currently if the payload type = PUBLISH, *payload
           pointer is substituted into the pkt->payload. In the
@@ -142,7 +155,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
  * \return umqtt_ret return code.
  */
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
-    uint8_t *payload, uint8_t pay_len) {
+    uint8_t *payload, size_t pay_len) {
 
   /* allocate payload */
   pkt->payload =
@@ -185,14 +198,11 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 }
 
 /**
- * \brief Function to construct a new default mqtt packet.
- * \param type The type of packet to be created.
- * \param *payload Pointer to payload data.
- * \param *pay_len The lenth of the attached payload data.
+ * \brief Function to construct new default mqtt packet headers.
+ * \param type The type of packet headers to be created.
  * \return Pointer to new mqtt_packet struct, 0 on failurer.
  */
-struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
-    uint8_t *payload, uint8_t pay_len) {
+struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type) {
 
   struct mqtt_packet *pkt = '\0';
 
@@ -211,6 +221,21 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     return 0;
   }
 
+  return pkt;
+}
+
+/**
+ * \brief Function to construct a new default mqtt packet.
+ * \param type The type of packet to be created.
+ * \param *payload Pointer to payload data.
+ * \param *pay_len The lenth of the attached payload data.
+ * \return Pointer to new mqtt_packet struct, 0 on failurer.
+ */
+struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
+    uint8_t *payload, size_t pay_len) {
+
+  struct mqtt_packet *pkt = construct_packet_headers(type);
+
   if (init_packet_payload(pkt, type, payload, pay_len)) {
     free_packet(pkt);
     return 0;
@@ -228,8 +253,8 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
  * \return the number of bytes saved
  */
 unsigned int finalise_packet(struct mqtt_packet *pkt) {
-  unsigned int fix_len = pkt->fix_len;
-  unsigned int delta = 0;
+  size_t fix_len = pkt->fix_len;
+  size_t delta = 0;
 
   encode_remaining_len(pkt, (pkt->var_len + pkt->pay_len));
 

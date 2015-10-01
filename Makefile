@@ -12,13 +12,16 @@ MKDIR_P = mkdir -p
 
 export
 
-all: setup srcs tests
+all: setup srcs apps tests
 
 setup:
 	${MKDIR_P} ${OBJDIR}
 
 srcs: setup
 	$(MAKE) -C src/ srcs
+
+apps: setup
+	$(MAKE) -C src/apps apps
 
 tests: srcs setup
 	$(MAKE) -C src/tests/ tests

@@ -169,9 +169,13 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
  * \param conn The connection to free.
  */
 void free_connection(struct broker_conn *conn) {
+  if (conn->free_method) {
+    conn->free_method(conn);
+  }
+
   if (conn) {
     free(conn);
   }
-
+  
   return;
 }
