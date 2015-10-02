@@ -139,7 +139,32 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
 }
 
 /**
- * \brief Function to send DISCONNECT packet and close the connection
+ * \brief Function to send packets to the broker connection.
+ * \param conn The connection to send the packet through.
+ * \param pkt The Packet to send to the broker
+ */
+umqtt_ret broker_send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+  if (conn->send_method && conn->send_method(conn, pkt)) {
+    return UMQTT_SUCCESS;
+  }
+  return UMQTT_PACKET_ERROR;
+}
+
+
+/**
+ * \brief Function to receive packets to the broker connection.
+ * \param conn The connection to send the packet through.
+ * \param pkt The Packet to send to the broker
+ */
+umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+  if (conn->recieve_method && conn->recieve_method(conn, pkt)) {
+    return UMQTT_SUCCESS;
+  }
+  return UMQTT_PACKET_ERROR;
+}
+
+/**
+ * \brief Function to send DISCONNECT packet and close the connection.
  * \param conn The connection to close.
  */
 umqtt_ret broker_disconnect(struct broker_conn *conn) {

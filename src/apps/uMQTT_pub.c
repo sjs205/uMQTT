@@ -37,6 +37,7 @@
 #define MQTT_BROKER_PORT      1883
 
 #define MAX_TOPIC_LEN 1024
+#define MAX_MSG_LEN 1024
 
 /* 
  * \brief function to print help
@@ -70,73 +71,85 @@ int main(int argc, char **argv) {
   int c, option_index = 0;
   char topic[MAX_TOPIC_LEN] = "\0"; 
   char host_ip[16] = MQTT_BROKER_IP;
+  char msg[1024];
   int host_port = MQTT_BROKER_PORT;
   int verbose = 0;
+
+  static struct option long_options[] =
+  {
+    /* These options set a flag. */
+    {"help",   no_argument,             0, 'h'},
+    {"verbose", no_argument,            0, 'v'},
+    {"topic", required_argument,        0, 't'},
+    {"host", required_argument,         0, 'H'},
+    {"port", required_argument,         0, 'p'},
+    {0, 0, 0, 0}
+  };
 
   /* get arguments */
   while (1)
   {
-    static struct option long_options[] =
-    {
-      /* These options set a flag. */
-      {"help",   no_argument,             0, 'h'},
-      {"verbose", no_argument,            0, 'v'},
-      {"topic", required_argument,        0, 't'},
-      {"host", required_argument,         0, 'H'},
-      {"port", required_argument,         0, 'p'},
-      {0, 0, 0, 0}
-    };
+    if ((c = getopt_long(argc, argv, "hvt:H:p:", long_options, &option_index)) != -1) {
 
-    c = getopt_long(argc, argv, "hvt:H:p:", long_options, &option_index);
+      switch (c) {
+        case 'h':
+          return print_usage();
 
-    if (c == -1)
+        case 'v':
+          /* set verbose */
+          verbose = 1;
+          break;
+
+        case 't':
+          /* Set topic */
+          if (optarg) {
+            strcpy(topic, optarg);
+          } else {
+            printf("Error: The topic flag should be followed by a topic.\n");
+            return print_usage();
+          }
+          break;
+
+        case 'H':
+          /* change the default host ip */
+          if (optarg) {
+            strcpy(host_ip, optarg);
+          } else {
+            printf("Error: The host flag should be followed by an IP address.\n");
+            return print_usage();
+          }
+          break;
+
+        case 'p':
+          /* change the default port */
+          if (optarg) {
+            host_port = *optarg;
+          } else {
+            printf("Error: The port flag should be followed by a port.\n");
+            return print_usage();
+          }
+          break;
+      }
+
+    } else {
+      /* Final arguement should be the publish message */
+      if (argv[option_index] != NULL) {
+        strcpy(msg, argv[option_index]);
+      }
       break;
-
-    switch (c) {
-      case 'h':
-        return print_usage();
-
-      case 'v':
-        /* set verbose */
-        verbose = 1;
-        break;
-
-      case 't':
-        /* Set topic */
-        if (optarg) {
-          strcpy(topic, optarg);
-        } else {
-          printf("Error: The topic flag should be followed by a topic.\n");
-          return print_usage();
-        }
-        break;
-
-      case 'H':
-        /* change the default host ip */
-        if (optarg) {
-          strcpy(host_ip, optarg);
-        } else {
-          printf("Error: The host flag should be followed by an IP address.\n");
-          return print_usage();
-        }
-        break;
-
-      case 'p':
-        /* change the default port */
-        if (optarg) {
-          host_port = *optarg;
-        } else {
-          printf("Error: The port flag should be followed by a port.\n");
-          return print_usage();
-        }
-        break;
     }
+      
+  }
+
+  if (argv[option_index] == NULL || argv[option_index + 1] == NULL) {
+      printf("Error: The PUBLISH message is missing.\n");
+      return -1;
   }
 
   struct broker_conn *conn;
 
   if (verbose) {
-    printf("Initialisig socket connectino\n");
+    printf("Initialisig socket connection\n");
   }
   init_linux_socket_connection(&conn, host_ip, sizeof(host_ip), host_port);
   if (!conn) {
@@ -160,8 +173,47 @@ int main(int argc, char **argv) {
     }
   }
 
-  struct mqtt_packet *pkt = construct_packet_headers(PUBLISH);
-  set_publish_variable_header(pkt, topic, strlen(topic));
+  if (verbose) {
+    printf("Constructiing MQTT packet\n");
+  }
 
+  struct mqtt_packet *pkt = construct_packet_headers(PUBLISH);
+
+  if (!pkt || (ret = set_publish_variable_header(pkt, topic, strlen(topic)))) {
+    printf("Error: Setting up packet.\n");
+    broker_disconnect(conn);
+    free_connection(conn);
+    free_packet(pkt);
+    return ret;
+  }
+
+  if ((ret = init_packet_payload(pkt, PUBLISH, (uint8_t *)msg, strlen(msg)))) {
+    printf("Error: Attaching payload.\n");
+    broker_disconnect(conn);
+    free_connection(conn);
+    free_packet(pkt);
+    return ret;
+  }
+
+  finalise_packet(pkt);
+
+  if (verbose) {
+    printf("Sending packet to broker\n");
+  }
+
+  if ((ret = broker_send_packet(conn, &pkt->raw))) {
+    printf("Error: Sending packet failed.\n");
+
+  } else if (verbose) {
+
+    printf("Successfully sent packet.\n");
+
+    printf("Disconnecting from broker.\n");
+  }
+
+
+  broker_disconnect(conn);
+  free_connection(conn);
+  free_packet(pkt);
   return ret;
 }

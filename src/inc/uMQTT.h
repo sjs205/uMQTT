@@ -99,14 +99,6 @@ struct mqtt_client {
   struct utf8_enc_str clientid;
 };
 
-
-/**
- * \brief Struct to store the MQTT connection state.
- */
-struct conn_state {
-  //blah
-};
-
 /**
  * \brief Struct to store the MQTT configuration.
  */
@@ -281,7 +273,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
-unsigned int finalise_packet(struct mqtt_packet *pkt);
+size_t finalise_packet(struct mqtt_packet *pkt);
 void disect_raw_packet(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);

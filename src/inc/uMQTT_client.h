@@ -55,6 +55,8 @@ void register_connection_methods(struct broker_conn *conn,
     size_t (*send_method)(struct broker_conn *,  struct raw_pkt *),
     size_t (*recieve_method)(struct broker_conn *, struct raw_pkt *),
     void (*free_method)(struct broker_conn *));
+umqtt_ret broker_send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
+umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 umqtt_ret broker_connect(struct broker_conn *conn);
 umqtt_ret broker_disconnect(struct broker_conn *conn);
 void free_connection(struct broker_conn *conn);

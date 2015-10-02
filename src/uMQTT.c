@@ -252,7 +252,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
  * \param pkt The mxtt_packet to finalise.
  * \return the number of bytes saved
  */
-unsigned int finalise_packet(struct mqtt_packet *pkt) {
+size_t finalise_packet(struct mqtt_packet *pkt) {
   size_t fix_len = pkt->fix_len;
   size_t delta = 0;
 
