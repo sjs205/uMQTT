@@ -39,12 +39,12 @@
 #define MAX_TOPIC_LEN 1024
 #define MAX_MSG_LEN 1024
 
-/* 
+/*
  * \brief function to print help
  */
 static int print_usage() {
 
-  fprintf(stderr, 
+  fprintf(stderr,
       "uMQTT_pub is an application that connects to an MQTT broker and sends a user defined\n"
       "publish pocket before disconnecting\n"
       "\n"
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 
   int ret;
   int c, option_index = 0;
-  char topic[MAX_TOPIC_LEN] = "\0"; 
+  char topic[MAX_TOPIC_LEN] = "\0";
   char host_ip[16] = MQTT_BROKER_IP;
   char msg[1024];
   int host_port = MQTT_BROKER_PORT;
@@ -133,15 +133,15 @@ int main(int argc, char **argv) {
 
     } else {
       /* Final arguement should be the publish message */
-      if (argv[option_index] != NULL) {
-        strcpy(msg, argv[option_index]);
+      if (argv[argc - 1] != NULL) {
+        strcpy(msg, argv[argc - 1]);
       }
       break;
     }
-      
+
   }
 
-  if (argv[option_index] == NULL || argv[option_index + 1] == NULL) {
+  if (argv[argc - 1] == NULL) {
       printf("Error: The PUBLISH message is missing.\n");
       return -1;
   }
@@ -174,7 +174,9 @@ int main(int argc, char **argv) {
   }
 
   if (verbose) {
-    printf("Constructiing MQTT packet\n");
+    printf("Constructiing MQTT PUBLISH packet with:\n");
+    printf("Topic; %s\n", topic);
+    printf("Message: %s\n", msg);
   }
 
   struct mqtt_packet *pkt = construct_packet_headers(PUBLISH);
@@ -210,7 +212,6 @@ int main(int argc, char **argv) {
 
     printf("Disconnecting from broker.\n");
   }
-
 
   broker_disconnect(conn);
   free_connection(conn);

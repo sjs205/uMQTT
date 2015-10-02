@@ -92,7 +92,7 @@ void register_connection_methods(struct broker_conn *conn,
 umqtt_ret broker_connect(struct broker_conn *conn) {
 
   if (conn->connect_method && conn->connect_method(conn)) {
-    printf("Error: No connect method registered\n");
+    printf("Error: Broker connection failed\n");
     return UMQTT_CONNECT_ERROR;
   }
 
