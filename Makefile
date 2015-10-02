@@ -20,10 +20,10 @@ setup:
 srcs: setup
 	$(MAKE) -C src/ srcs
 
-apps: setup
+apps: setup srcs
 	$(MAKE) -C src/apps apps
 
-tests: srcs setup
+tests: setup srcs
 	$(MAKE) -C src/tests/ tests
 
 .PHONY: clean

@@ -36,6 +36,7 @@ void init_connection(struct broker_conn **conn_p) {
   struct broker_conn *conn;
 
   if (!(conn = calloc(1, sizeof(struct broker_conn)))) {
+
     printf("Error: Allocating space for the broker connection failed.\n");
     free_connection(conn);
   }
@@ -91,7 +92,7 @@ void register_connection_methods(struct broker_conn *conn,
 umqtt_ret broker_connect(struct broker_conn *conn) {
 
   if (conn->connect_method && conn->connect_method(conn)) {
-    printf("\n Error: No connect method registered\n");
+    printf("Error: No connect method registered\n");
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -101,20 +102,20 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   free_packet(pkt);
 
   if (!ret) {
-    printf("\n Error:Connect Packet Failed\n");
+    printf("Error: Connect Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
   }
 
   /* get response */
   struct mqtt_packet *pkt_resp;
   if (init_packet(&pkt_resp)) {
-    printf("\n Error: Allocatiing memory\n");
+    printf("Error: Allocatiing memory\n");
     return UMQTT_MEM_ERROR;
   }
 
   pkt_resp->len = conn->recieve_method(conn, &pkt_resp->raw);
   if (!pkt_resp->len) {
-    printf("\n Error: Connect Packet Failed\n");
+    printf("Error: Connect Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -123,7 +124,6 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   /* Processing response */
   if (pkt_resp->fixed->generic.type == CONNACK &&
       pkt_resp->variable->connack.connect_ret == CONN_ACCEPTED) {
-    printf("Successfully connected to the MQTT broker.\n");
     conn->state = 1;
     free_packet(pkt_resp);
 
