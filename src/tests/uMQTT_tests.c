@@ -63,6 +63,8 @@ int test_enc_dec_remaining_pkt_len() {
     }
   }
 
+  free_packet(pkt);
+
   if (ret) {
     printf("Remaining length encoding/decoding failed.\n\n");
   } else {
