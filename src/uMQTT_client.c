@@ -119,7 +119,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     return UMQTT_CONNECT_ERROR;
   }
 
-  disect_raw_packet(pkt);
+  disect_raw_packet(pkt_resp);
 
   /* Processing response */
   if (pkt_resp->fixed->generic.type == CONNACK &&
@@ -180,6 +180,7 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
     if (!conn->send_method(conn, &pkt->raw)) {
       return UMQTT_PACKET_ERROR;
     }
+    free_packet(pkt);
   }
 
   if (conn->disconnect_method(conn)) {
