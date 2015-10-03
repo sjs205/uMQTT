@@ -4,9 +4,17 @@ OBJDIR = $(BINDIR)/obj
 SRCDIR = $(CURDIR)/src
 INCDIR = $(SRCDIR)/inc
 
-CC = gcc
-CFLAGS = -c -Wall -Werror -I$(INCDIR) -g3 -O0
-LDFLAGS =
+TARGET = x86
+
+ifeq ($(TARGET),x86)
+	CC = gcc
+	CFLAGS = -c -Wall -Werror -I$(INCDIR) -g3 -O0
+	LDFLAGS =
+else ifeq ($(TARGET),avr)
+	CC = avr-gcc
+	CFLAGS = -c -Wall -Werror -I$(INCDIR)
+	LDFLAGS =
+endif
 
 MKDIR_P = mkdir -p
 
@@ -25,6 +33,9 @@ apps: setup srcs
 
 tests: setup srcs
 	$(MAKE) -C src/tests/ tests
+
+debug: CFLAGS += -DDEBUG -g
+debug: all
 
 .PHONY: clean
 clean:
