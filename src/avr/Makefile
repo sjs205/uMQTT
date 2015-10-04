@@ -74,8 +74,7 @@ TARGET = uMQTT_hello_world
 # Object files directory
 #     To put object files in current directory, use a dot (.), do NOT make
 #     this an empty or blank macro!
-# uMQTT: Defined in parent Makefile
-#OBJDIR = .
+OBJDIR ?= .
 
 
 # List C source files here. (C dependencies are automatically generated.)

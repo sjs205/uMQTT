@@ -43,4 +43,4 @@ debug: all
 
 .PHONY: clean
 clean:
-	rm -rf $(BINDIR) $(AVRDIR)/*.{elf,eep,lst,map,o,lst,sym,hex}
+	rm -rf $(BINDIR) $(AVRDIR)/*.{elf,eep,lss,map,o,lst,sym,hex}
