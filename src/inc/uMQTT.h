@@ -33,6 +33,17 @@
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
 #define UMQTT_MAX_PACKET_LEN      1024
 
+/* Remaining length max bytes */
+#ifdef MICRO_CLIENT
+/* 128 * 128 = 16384 */
+#define MAX_REMAIN_LEN_BYTES      2
+#define MAX_REMAIN_LEN_PRODUCT    16384
+#else
+/* 128 * 128 * 128 * 128 = 268435456 */
+#define MAX_REMAIN_LEN_BYTES      4
+#define MAX_REMAIN_LEN_PRODUCT    268435456
+#endif
+
 /**
  * \brief uMQTT return codes.
  */

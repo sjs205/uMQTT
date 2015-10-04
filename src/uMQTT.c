@@ -310,7 +310,7 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
  * \param delta Number of positions to move memory backwards
  */
 void memmove_back(uint8_t *mem, size_t delta, size_t n) {
-  int i;
+  size_t i;
   if (mem) {
     for (i = 0; i <= n; i++) {
       mem[i] = mem[i + delta];
@@ -353,7 +353,7 @@ void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
       pkt->fixed->remain_len[i] |= 128;
     }
     i++;
-  } while (len > 0 && i < 4);
+  } while (len > 0 && i < MAX_REMAIN_LEN_BYTES);
 
   /* Set the length of the fixed pkt */
   pkt->fix_len = 1 + i;
@@ -374,13 +374,13 @@ unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
   do {
     len += (pkt->fixed->remain_len[i] & 127) * product;
 
-    if (product > 128*128*128) {
+    product *= 128;
+    if (product > MAX_REMAIN_LEN_PRODUCT) {
       printf("Error: Malformed remaining length.\n");
       return 0;
     }
-    product *= 128;
 
-  } while ((pkt->fixed->remain_len[i++] & 128) != 0 && i < 4);
+  } while ((pkt->fixed->remain_len[i] & 128) != 0 && i++ < MAX_REMAIN_LEN_BYTES);
 
   return len;
 }
