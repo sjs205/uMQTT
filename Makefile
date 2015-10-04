@@ -4,21 +4,17 @@ OBJDIR = $(BINDIR)/obj
 SRCDIR = $(CURDIR)/src
 INCDIR = $(SRCDIR)/inc
 
-TARGET = x86
-
-ifeq ($(TARGET),x86)
-	CC = gcc
-	CFLAGS = -c -Wall -Werror -I$(INCDIR) -g3 -O0
-	LDFLAGS =
-else ifeq ($(TARGET),avr)
-	CC = avr-gcc
-	CFLAGS = -c -Wall -Werror -I$(INCDIR)
-	LDFLAGS =
-endif
-
 MKDIR_P = mkdir -p
 
 export
+
+PLATFORM = x86
+
+ifeq ($(PLATFORM),x86)
+	
+CC = gcc
+CFLAGS = -c -Wall -Werror -I$(INCDIR) -g3 -O0
+LDFLAGS =
 
 all: setup srcs apps tests
 
@@ -36,6 +32,22 @@ tests: setup srcs
 
 debug: CFLAGS += -DDEBUG -g
 debug: all
+
+else ifeq ($(PLATFORM),avr)
+
+CC = avr-gcc
+CFLAGS = -c -Wall -Werror -I$(INCDIR)
+LDFLAGS =
+
+avr: setup
+	$(MAKE) -C src/avr/ all
+
+setup:
+	${MKDIR_P} ${OBJDIR}
+
+unexport PLATFORM
+
+endif
 
 .PHONY: clean
 clean:
