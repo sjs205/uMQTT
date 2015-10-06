@@ -33,7 +33,7 @@
 usart_buf *usart_tx_buf; 
 usart_buf *usart_rx_buf; 
 
-static void usart_load_tx_buf(uint8_t *buf, size_t size) {
+static void usart_load_tx_buf(const uint8_t *buf, size_t size) {
   uint8_t i;
 
   for (i = 0; i < size; i++) {
@@ -54,20 +54,31 @@ int main(void)
 
   /* initialise USART buffers and usart */
   usart_tx_buf = usart_buf_init(USART_TX_BUF_SIZE);
-  usart_rx_buf = usart_buf_init(USART_RX_BUF_SIZE);
   usart_init();
   usart_half_duplex_init();
 
   /* enable global interrupts */
   sei();
 
+
   /* Create Hello World packet */
   struct mqtt_packet *pkt = construct_packet_headers(PUBLISH);
-  set_publish_variable_header(pkt, "uMQTT_avr", sizeof("uMQTT_avr"));
-  init_packet_payload(pkt, PUBLISH, (uint8_t *)"Hello World!",
-      sizeof("Hello World!"));
+
+  if (!pkt) {
+    usart_load_tx_buf((uint8_t *)"pkt_fail\n", 8);
+  }
+
+  if (set_publish_variable_header(pkt, "uMQTT_avr", sizeof("uMQTT_avr"))) {
+    usart_load_tx_buf((uint8_t *)"var_fail\n", 9);
+  }
+
+  if (init_packet_payload(pkt, PUBLISH, (uint8_t *)"Hello World!",
+        sizeof("Hello World!"))) {
+    usart_load_tx_buf((uint8_t *)"pay_fail\0", 9);
+  }
 
   finalise_packet(pkt);
+
 
   for (;;) {
 
@@ -75,9 +86,10 @@ int main(void)
       tx_enable(TRUE);
     }
 
+    /* send the packet */
     usart_load_tx_buf(pkt->raw.buf, *pkt->raw.len);
 
-    _delay_ms(500); 
+    _delay_ms(2000); 
 
   }
 

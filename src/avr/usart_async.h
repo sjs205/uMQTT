@@ -52,7 +52,7 @@
 /*
  *	USART Buffer definitions
  */
-#define USART_TX_BUF_SIZE     127
+#define USART_TX_BUF_SIZE     32
 #define USART_RX_BUF_SIZE     12
 
 #define SUCCESS		0
