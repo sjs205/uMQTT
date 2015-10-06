@@ -31,17 +31,24 @@
 #define MQTT_PROTO_LEVEL          0x04
 #define MQTT_CLIENT_ID            "uMQTT"
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
-#define UMQTT_MAX_PACKET_LEN      1024
 
 /* Remaining length max bytes */
 #ifdef MICRO_CLIENT
-/* 128 * 128 = 16384 */
-#define MAX_REMAIN_LEN_BYTES      2
-#define MAX_REMAIN_LEN_PRODUCT    16384
+  /* 128 * 128 = 16384 */
+  #define MAX_REMAIN_LEN_BYTES      2
+  #define MAX_REMAIN_LEN_PRODUCT    16384
+
+  /* used to initialise a new packet */
+  #define UMQTT_MAX_PACKET_LEN      64
+
 #else
-/* 128 * 128 * 128 * 128 = 268435456 */
-#define MAX_REMAIN_LEN_BYTES      4
-#define MAX_REMAIN_LEN_PRODUCT    268435456
+  /* 128 * 128 * 128 * 128 = 268435456 */
+  #define MAX_REMAIN_LEN_BYTES      4
+  #define MAX_REMAIN_LEN_PRODUCT    268435456
+
+  /* used to initialise a new packet */
+  #define UMQTT_MAX_PACKET_LEN      1024
+
 #endif
 
 /**
@@ -160,7 +167,7 @@ struct __attribute__((__packed__)) pkt_fixed_header {
     struct pkt_publish_fixed_header publish;
   };
 
-  uint8_t remain_len[4];
+  uint8_t remain_len[MAX_REMAIN_LEN_BYTES];
 };
 
 /**
