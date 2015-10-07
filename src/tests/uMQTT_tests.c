@@ -35,14 +35,14 @@
  */
 int test_enc_dec_remaining_pkt_len() {
 
-  int ret = 0, i;
+  int ret = 0, i, j;
 
   unsigned int lengths[8] = { 0, 127, 128, 16383,
     16384, 2097151, 2097152, 268435455 };
 
   struct mqtt_packet *pkt = '\0';
 
-  printf("Testing remaining packet length encoding/decoding:\n");
+  printf("Testing remaining packet length encoding/decoding and length estimation:\n");
 
   init_packet(&pkt);
   init_packet_fixed_header(pkt, CONNECT);
@@ -56,11 +56,22 @@ int test_enc_dec_remaining_pkt_len() {
         pkt->fixed->remain_len[3]);
 
     int len_dec = decode_remaining_len(pkt);
-    printf("Decoded:%d\n", len_dec);
+    printf("Decoded:%d\t\t", len_dec);
     if (len_dec != lengths[i]) {
-      printf("\tDecode FAILED\n");
+      printf("\tDecode FAILED\t");
       ret = 1;
     }
+
+    int bytes = required_remaining_len_bytes(lengths[i]);
+    for (j = 1; j <= 4 && (pkt->fixed->remain_len[j-1] & 0x80); j++);
+    printf("Estimated %d bytes %d ", bytes, j);
+    if (bytes == j) {
+      printf("Successfully\n");
+    } else {
+      printf("Unsuccessfully\n");
+    }
+
+
   }
 
   free_packet(pkt);

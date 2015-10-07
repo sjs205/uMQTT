@@ -29,6 +29,48 @@
 #include "uMQTT.h"
 #include "uMQTT_helper.h"
 
+void print_struct_sizes() {
+
+  printf("\n\nThe following shows the compile-time sizes of a number of variables used:\n\n");
+
+  printf("UMQTT_MAX_PACKET_LEN \t\t\t\t\t\t%d\n\n", UMQTT_MAX_PACKET_LEN);
+
+  printf("sizeof(struct mqtt_packet): \t\t\t\t\t%zu bytes\n",
+      sizeof(struct mqtt_packet));
+  printf("{\n");
+  printf("\tsizeof(struct pkt_fixed_header): \t\t\t%zu bytes\n",
+      sizeof(struct pkt_fixed_header));
+  printf("\t{\n");
+  printf("\t\tsizeof(struct pkt_generic_fixed_header): \t%zu bytes\n",
+      sizeof(struct pkt_generic_fixed_header));
+  printf("\t\tsizeof(struct pkt_publish_fixed_header): \t%zu bytes\n",
+      sizeof(struct pkt_publish_fixed_header));
+  printf("\t}\n");
+  printf("\tsizeof(struct pkt_variable_header): \t\t\t%zu bytes\n",
+      sizeof(struct pkt_variable_header));
+  printf("\t{\n");
+  printf("\t\tsizeof(struct connect_variable_header): \t%zu bytes\n",
+      sizeof(struct connect_variable_header));
+  printf("\t\tsizeof(struct connack_variable_header): \t%zu bytes\n",
+      sizeof(struct connack_variable_header));
+  printf("\t\tsizeof(struct publish_variable_header): \t%zu bytes\n",
+      sizeof(struct publish_variable_header));
+  printf("\t\tsizeof(struct puback_variable_header): \t\t%zu bytes\n",
+      sizeof(struct puback_variable_header));
+  printf("\t}\n");
+  printf("\tsizeof(struct pkt_payload): \t\t\t\t%zu bytes\n",
+      sizeof(struct pkt_payload));
+  printf("\n\tsizeof(struct raw_pkt): \t\t\t\t%zu bytes\n",
+      sizeof(struct raw_pkt));
+
+  printf("}\n");
+  printf("\n\nsizeof(struct utf8_enc_str): \t\t\t\t\t%zu bytes\n",
+      sizeof(struct utf8_enc_str));
+
+  return;
+}
+
+
 int main() {
 
   struct mqtt_packet *pkt;
@@ -69,6 +111,8 @@ int main() {
   print_packet(pkt);
 
   free_packet(pkt);
+
+  print_struct_sizes();
 
   return 0;
 }
