@@ -46,7 +46,7 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
   struct broker_conn *conn;
 
   init_connection(&conn);
-  struct linux_broker_socket *skt;
+  struct linux_broker_socket *skt = '\0';
 
   if (conn && (!(skt = calloc(1, sizeof(struct linux_broker_socket))))) {
       printf("Error: Allocating space for the broker connection failed.\n");

@@ -14,7 +14,7 @@ PLATFORM = x86
 ifeq ($(PLATFORM),x86)
 
 CC = gcc
-CFLAGS = -c -Wall -Werror -I$(INCDIR) -g3 -O0
+CFLAGS = -c -Wall -Werror -I$(INCDIR) -O2
 LDFLAGS =
 
 else ifeq ($(PLATFORM),avr)
@@ -38,7 +38,7 @@ apps: setup srcs
 tests: setup srcs
 	$(MAKE) -C src/tests/ tests
 
-debug: CFLAGS += -DDEBUG -g
+debug: CFLAGS += -DDEBUG -g -O0
 debug: all
 
 .PHONY: clean

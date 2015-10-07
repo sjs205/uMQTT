@@ -32,7 +32,7 @@
  * \param type The type string to return.
  */
 char *get_type_string(ctrl_pkt_type type) {
-  char *ret;
+  char *ret = 0;
 
   switch (type) {
     case RESERVED_0:
