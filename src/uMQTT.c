@@ -265,8 +265,8 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
     memmove_back(&pkt->raw.buf[pkt->fix_len + pkt->var_len], delta, pkt->pay_len);
 
     /* reassign pointers to packet elements */
-    pkt->variable -= delta;
-    pkt->payload -= delta;
+    pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
+    pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
     pkt->len -= delta;
   }
