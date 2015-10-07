@@ -60,7 +60,7 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
 
   /* allocate initial fixed header length */
   pkt->fix_len =
-    required_remaining_len_bytes(UMQTT_MAX_PACKET_LEN) + 1;
+    1 + MAX_REMAIN_LEN_BYTES;
 
   /* alloate fixed header */
   pkt->fixed = (struct pkt_fixed_header *)&pkt->raw.buf[0];
@@ -261,8 +261,8 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
   delta = fix_len - pkt->fix_len;
   if (delta) {
     /* need to shift data backwards to ensure packet is packed */
-    memmove_back(&pkt->raw.buf[delta], delta, pkt->var_len);
-    memmove_back(&pkt->raw.buf[delta + pkt->var_len], delta, pkt->pay_len);
+    memmove_back(&pkt->raw.buf[pkt->fix_len], delta, pkt->var_len);
+    memmove_back(&pkt->raw.buf[pkt->fix_len + pkt->var_len], delta, pkt->pay_len);
 
     /* reassign pointers to packet elements */
     pkt->variable -= delta;
@@ -287,7 +287,7 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
   /* size of fixed header */
   pkt->len = decode_remaining_len(pkt);
   pkt->fix_len =
-    required_remaining_len_bytes(pkt->len);
+    1 + required_remaining_len_bytes(pkt->len);
 
   pkt->len += pkt->fix_len;
 
@@ -305,9 +305,10 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
  * \brief Function to move memory backwards - prefered over memmove
  *        since this will copy memory to a temp location before copying
  *        to the new location, thus taking upto 3xMEM
- * \param dest Destination memory address - should be the start position
+ * \param mem Destination memory address - should be the start position
  *        i.e., current_position - delta
  * \param delta Number of positions to move memory backwards
+ * \param n Number of bytes to move backwards
  */
 void memmove_back(uint8_t *mem, size_t delta, size_t n) {
   size_t i;
@@ -326,12 +327,12 @@ void memmove_back(uint8_t *mem, size_t delta, size_t n) {
  * \param len The length that should be encoded.
  */
 uint8_t required_remaining_len_bytes(unsigned int len) {
-  uint8_t i = 1;
+  uint8_t i = 0;
   do {
     len /= 128;
 
     i++;
-  } while (len > 0 && i < 5);
+  } while (len > 0 && i < MAX_REMAIN_LEN_BYTES);
 
   return i;
 }
