@@ -49,14 +49,14 @@ void print_struct_sizes() {
   printf("\tsizeof(struct pkt_variable_header): \t\t\t%zu bytes\n",
       sizeof(struct pkt_variable_header));
   printf("\t{\n");
+  printf("\t\tsizeof(struct generic_variable_header): \t%zu bytes\n",
+      sizeof(struct generic_variable_header));
   printf("\t\tsizeof(struct connect_variable_header): \t%zu bytes\n",
       sizeof(struct connect_variable_header));
   printf("\t\tsizeof(struct connack_variable_header): \t%zu bytes\n",
       sizeof(struct connack_variable_header));
   printf("\t\tsizeof(struct publish_variable_header): \t%zu bytes\n",
       sizeof(struct publish_variable_header));
-  printf("\t\tsizeof(struct puback_variable_header): \t\t%zu bytes\n",
-      sizeof(struct generic_variable_header));
   printf("\t}\n");
   printf("\tsizeof(struct pkt_payload): \t\t\t\t%zu bytes\n",
       sizeof(struct pkt_payload));
@@ -86,6 +86,13 @@ int main() {
   pkt = construct_default_packet(PUBLISH,
       (uint8_t *)"uMQTT test PUBLISH packet",
       sizeof("uMQTT test PUBLISH packet"));
+
+  print_packet(pkt);
+
+  free_packet(pkt);
+
+  /* subscribe packet */
+  pkt = construct_default_packet(SUBSCRIBE, 0, 0);
 
   print_packet(pkt);
 

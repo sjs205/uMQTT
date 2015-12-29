@@ -31,6 +31,7 @@
 #define MQTT_PROTO_LEVEL          0x04
 #define MQTT_CLIENT_ID            "uMQTT"
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
+#define UMQTT_DEFAULT_QOS         2
 
 /* Remaining length max bytes */
 #ifdef MICRO_CLIENT
@@ -290,6 +291,8 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic
 umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
+umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
+    size_t topic_len, uint8_t qos);
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);

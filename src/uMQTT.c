@@ -112,17 +112,18 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 
       break;
 
-    case PINGREQ:
-    case PINGRESP:
-    case DISCONNECT:
-      break;
-
     case SUBSCRIBE:
       /* variable header - default action => qos = 0 */
+      pkt->var_len = sizeof(struct generic_variable_header);
 
       /* defaults */
       set_subscribe_variable_header(pkt);
 
+      break;
+
+    case PINGREQ:
+    case PINGRESP:
+    case DISCONNECT:
       break;
 
     default:
@@ -158,11 +159,8 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic
  */
 umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt) {
 
-  ///////// The following should not be the publish field.
-  if (pkt->fixed->publish.qos) {
-    /* set packet identifier */
-    pkt->variable->generic.pkt_id = 0x0000;
-  }
+  /* At present it isn't clear if this is required when qos = 0 */
+  pkt->variable->generic.pkt_id = 0x0000;
 
   return UMQTT_SUCCESS;
 }
@@ -196,14 +194,19 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
       break;
 
     case PUBLISH:
+    case SUBSCRIBE:
       pkt->pay_len = pay_len;
 
-      /* the following is less that ideal since it requires 2 copies
-       * of the payload in memory.
-       */
-      memcpy(&pkt->payload->data, payload, pay_len);
+      if (pay_len) {
+        memcpy(&pkt->payload->data, payload, pay_len);
+      } else {
+        /* defaults */
+        set_subscribe_payload(pkt, UMQTT_DEFAULT_TOPIC,
+            sizeof(UMQTT_DEFAULT_TOPIC), UMQTT_DEFAULT_QOS);
+      }
 
       break;
+
 
     case PINGREQ:
     case PINGRESP:
@@ -218,6 +221,24 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
   }
 
   pkt->len += pkt->pay_len;
+
+  return UMQTT_SUCCESS;
+}
+
+/**
+ * \brief Function to set the topic of a SUBSCRIBE packet.
+ *        NOTE: We currently only support one topic per subscribe message.
+ * \param topic The topic to subscribe to.
+ * \param topic_len The length of the topic.
+ * \param qos The subscription QOS.
+ */
+umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
+    size_t topic_len, uint8_t qos) {
+
+  pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
+      topic, topic_len);
+  
+  *(&pkt->payload->data + pkt->pay_len - 1) = (0x03 & qos);
 
   return UMQTT_SUCCESS;
 }
@@ -263,7 +284,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
 
   if (init_packet_payload(pkt, type, payload, pay_len)) {
     free_packet(pkt);
-    return 0;
+    return NULL;
   }
 
   finalise_packet(pkt);
