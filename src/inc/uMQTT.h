@@ -219,15 +219,16 @@ struct publish_variable_header {
 };
 
 /**
- * \brief Struct to store the variable header of a PUBACK control packet.
+ * \brief Struct to store the variable header of a generic control packet.
  * \param pkt_id The packet identifier - only required for qos = 1 or 2.
  */
-struct puback_variable_header {
+struct generic_variable_header {
   uint16_t pkt_id                 : 16;
 };
 
 struct pkt_variable_header {
   union {
+    struct generic_variable_header generic;
     struct connect_variable_header connect;
     struct connack_variable_header connack;
     struct publish_variable_header publish;
@@ -286,6 +287,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type);
 umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len);
+umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);

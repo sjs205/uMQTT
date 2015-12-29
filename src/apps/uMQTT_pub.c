@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
   }
   init_linux_socket_connection(&conn, host_ip, sizeof(host_ip), host_port);
   if (!conn) {
-    printf("Error: Initialising socket connection\n");
+    printf("XError: Initialising socket connection\n");
     return -1;
   }
 

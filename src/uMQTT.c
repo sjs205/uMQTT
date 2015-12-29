@@ -69,6 +69,11 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
 
   pkt->len = pkt->fix_len;
 
+  if (type == SUBSCRIBE) {
+    /* Reserved bytes should be 0x02 for SUBSCRIBE */
+    pkt->fixed->generic.reserved = 0x02;
+  }
+
   return UMQTT_SUCCESS;
 }
 
@@ -110,6 +115,13 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     case PINGREQ:
     case PINGRESP:
     case DISCONNECT:
+      break;
+
+    case SUBSCRIBE:
+      /* variable header - default action => qos = 0 */
+
+      /* defaults */
+      set_subscribe_variable_header(pkt);
 
       break;
 
@@ -141,6 +153,19 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic
   return UMQTT_SUCCESS;
 }
 
+/**
+ * \brief Function to set the variable header of a SUBSCRIBE packet.
+ */
+umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt) {
+
+  ///////// The following should not be the publish field.
+  if (pkt->fixed->publish.qos) {
+    /* set packet identifier */
+    pkt->variable->generic.pkt_id = 0x0000;
+  }
+
+  return UMQTT_SUCCESS;
+}
 
 /**
  * \brief Function to allocate memory for mqtt packet payload.
@@ -208,17 +233,17 @@ struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type) {
 
   if (init_packet(&pkt)) {
     free_packet(pkt);
-    return 0;
+    return NULL;
   }
 
   if (init_packet_fixed_header(pkt, type)) {
     free_packet(pkt);
-    return 0;
+    return NULL;
   }
 
   if (init_packet_variable_header(pkt, type)) {
     free_packet(pkt);
-    return 0;
+    return NULL;
   }
 
   return pkt;

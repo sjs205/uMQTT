@@ -56,7 +56,7 @@ void print_struct_sizes() {
   printf("\t\tsizeof(struct publish_variable_header): \t%zu bytes\n",
       sizeof(struct publish_variable_header));
   printf("\t\tsizeof(struct puback_variable_header): \t\t%zu bytes\n",
-      sizeof(struct puback_variable_header));
+      sizeof(struct generic_variable_header));
   printf("\t}\n");
   printf("\tsizeof(struct pkt_payload): \t\t\t\t%zu bytes\n",
       sizeof(struct pkt_payload));
