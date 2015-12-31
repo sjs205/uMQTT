@@ -139,6 +139,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 
 /**
  * \brief Function to set the variable header of a PUBLISH packet.
+ * \param pkt Pointer to the address of the packet.
  * \param topic The topic for which the message should be published.
  * \param topic_len The length of the topic.
  */
@@ -156,6 +157,7 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic
 
 /**
  * \brief Function to set the variable header of a SUBSCRIBE packet.
+ * \param pkt Pointer to the address of the packet.
  */
 umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt) {
 
@@ -236,8 +238,8 @@ umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos) {
 
   pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
-      topic, topic_len);
-  
+      topic, topic_len) + 1;
+ printf("topic: %s\n", topic); 
   *(&pkt->payload->data + pkt->pay_len - 1) = (0x03 & qos);
 
   return UMQTT_SUCCESS;
@@ -337,12 +339,46 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
 
   pkt->len += pkt->fix_len;
 
+  switch (pkt->fixed->generic.type) {
+    case CONNECT:
+      pkt->var_len = sizeof(struct connect_variable_header);
+      break;
+
+    case CONNACK:
+      pkt->var_len = sizeof(struct connect_variable_header);
+      break;
+
+    case PUBLISH:
+      pkt->var_len = sizeof(struct publish_variable_header);
+      break;
+
+    case PUBACK:
+    case PUBCOMP:
+    case PUBREL:
+    case PUBREC:
+    case SUBSCRIBE:
+    case SUBACK:
+    case UNSUBACK:
+    case UNSUBSCRIBE:
+      pkt->var_len = sizeof(struct generic_variable_header);
+      break;
+
+    case PINGREQ:
+    case PINGRESP:
+    case DISCONNECT:
+      pkt->var_len = 0;
+
+      break;
+
+    default:
+      printf("Error: MQTT packet type not currently supported.\n");
+  }
   /* assign variable header */
   pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
 
   /* assign payload */
-
-  /* reallocate/reduce packet size? */
+  pkt->pay_len = pkt->len - (pkt->fix_len + pkt->var_len);
+  pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
   return;
 }

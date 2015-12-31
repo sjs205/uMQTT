@@ -139,9 +139,10 @@ size_t send_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
  */
 size_t read_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
-  size_t n = read(skt->sockfd, pkt->buf, sizeof(pkt->buf) - 1);
+  size_t n = read(skt->sockfd, &pkt->buf, sizeof(pkt->buf) - 1);
   if (n < 0)
     printf("ERROR: reading from socket\n");
+  
   return n;
 }
 

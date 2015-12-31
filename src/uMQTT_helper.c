@@ -147,9 +147,7 @@ void print_packet(struct mqtt_packet *pkt) {
     printf("\nNo Payload.\n");
   }
 
-  printf("\nTotal Length of new packet = %zu\n", pkt->len);
-
-  printf("\nTX packet:\n");
+  printf("\nRaw packet:\n");
   print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
 }
 

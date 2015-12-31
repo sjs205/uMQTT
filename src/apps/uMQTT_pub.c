@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 
   int ret;
   int c, option_index = 0;
-  char topic[MAX_TOPIC_LEN] = "\0";
+  char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char host_ip[16] = MQTT_BROKER_IP;
   char msg[1024];
   int host_port = MQTT_BROKER_PORT;

@@ -31,7 +31,7 @@
 #define MQTT_PROTO_LEVEL          0x04
 #define MQTT_CLIENT_ID            "uMQTT"
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
-#define UMQTT_DEFAULT_QOS         2
+#define UMQTT_DEFAULT_QOS         0
 
 /* Remaining length max bytes */
 #ifdef MICRO_CLIENT
