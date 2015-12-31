@@ -164,6 +164,81 @@ umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
 }
 
 /**
+ * \brief Function to send PUBLISH packet to broker.
+ * \param conn The connection to close.
+ * \param topic The topic for which the message should be published.
+ * \param topic_len The length of the topic.
+ * \param *payload Pointer to payload data.
+ * \param *pay_len The lenth of the attached payload data.
+ */
+umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
+    size_t topic_len, uint8_t *payload, size_t pay_len) {
+
+  struct mqtt_packet *pkt = construct_default_packet(PUBLISH, payload,
+      pay_len);
+  if (!pkt) {
+    printf("Error: PUBLISH packet failed\n");
+    return UMQTT_ERROR;
+  }
+
+  if (conn->send_method(conn, (struct raw_pkt *)pkt->raw.buf)) {
+    printf("Error: Failed to send packet\n");
+    return UMQTT_ERROR;
+  }
+
+  return UMQTT_SUCCESS;
+}
+
+
+/**
+ * \brief Function to send SUBSCRIBE packet to broker.
+ * \param conn The connection to close.
+ * \param topic The topic for which the message should be published.
+ * \param topic_len The length of the topic.
+ */
+umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
+    size_t topic_len) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+  struct mqtt_packet *pkt = NULL;
+  struct mqtt_packet *sub_pkt = construct_default_packet(SUBSCRIBE, 0, 0);
+  if (!sub_pkt) {
+    printf("Error: SUBSCRIBE packet failed\n");
+    ret = UMQTT_ERROR;
+    goto free;
+  }
+
+  set_subscribe_payload(sub_pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
+
+  if (conn->send_method(conn, (struct raw_pkt *)sub_pkt->raw.buf)) {
+    printf("Error: Failed to send packet\n");
+    ret = UMQTT_ERROR;
+    goto free;
+  }
+
+  /* Get response */
+  if (init_packet(&pkt)) {
+    printf("Error: Initialising packet\n");
+    ret = UMQTT_ERROR;
+    goto free;
+  }
+
+  pkt->len = conn->recieve_method(conn, &pkt->raw); 
+  disect_raw_packet(pkt);
+  if (pkt->fixed->generic.type != SUBACK && pkt->payload->data != 0x00) {
+    printf("Error, incorrect SUBACK return\n");
+    ret = UMQTT_ERROR;
+  }
+
+free:
+
+  free_packet(sub_pkt);
+  free_packet(pkt);
+
+  return ret;
+}
+
+/**
  * \brief Function to send DISCONNECT packet and close the connection.
  * \param conn The connection to close.
  */

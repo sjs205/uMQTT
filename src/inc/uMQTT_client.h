@@ -58,6 +58,10 @@ void register_connection_methods(struct broker_conn *conn,
 umqtt_ret broker_send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 umqtt_ret broker_connect(struct broker_conn *conn);
+umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
+    size_t topic_len, uint8_t *payload, size_t pay_len);
+umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
+    size_t topic_len);
 umqtt_ret broker_disconnect(struct broker_conn *conn);
 void free_connection(struct broker_conn *conn);
 #endif          /* UMQTT_CLIENT__H */
