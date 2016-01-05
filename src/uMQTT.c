@@ -100,6 +100,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8);
       memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
       pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
+      pkt->variable->connect.clean_session_flag |= 1;
 
       break;
 
@@ -239,7 +240,6 @@ umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
 
   pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
       topic, topic_len) + 1;
- printf("topic: %s\n", topic); 
   *(&pkt->payload->data + pkt->pay_len - 1) = (0x03 & qos);
 
   return UMQTT_SUCCESS;

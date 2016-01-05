@@ -61,6 +61,8 @@ typedef enum {
   UMQTT_MEM_ERROR,
   UMQTT_CONNECT_ERROR,
   UMQTT_DISCONNECT_ERROR,
+  UMQTT_SEND_ERROR,
+  UMQTT_RECIEVE_ERROR,
   UMQTT_PACKET_ERROR,
 } umqtt_ret;
 
@@ -188,13 +190,13 @@ struct __attribute__((__packed__)) connect_variable_header {
   uint16_t name_len               : 16;
   uint8_t proto_name[4];
   uint8_t proto_level;
-  uint8_t user_flag               : 1;
-  uint8_t pass_flag               : 1;
-  uint8_t will_retain_flag        : 1;
-  uint8_t will_qos_flag           : 1;
-  uint8_t will_flag               : 1;
-  uint8_t clean_session_flag      : 1;
   uint8_t reserved                : 1;
+  uint8_t clean_session_flag      : 1;
+  uint8_t will_flag               : 1;
+  uint8_t will_qos_flag           : 1;
+  uint8_t will_retain_flag        : 1;
+  uint8_t pass_flag               : 1;
+  uint8_t user_flag               : 1;
   uint16_t keep_alive             :16;
 };
 

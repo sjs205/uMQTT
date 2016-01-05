@@ -54,7 +54,7 @@ static int print_usage() {
       " -v [--verbose]           : Verbose logging\n"
       "\n"
       "Publish options:\n"
-      " -t [--topic-conf] <file  : Change the default topic . Default: uMQTT_PUB\n"
+      " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
       "\n"
       "Broker options:\n"
       " -H [--host] <host-IP>    : Change the default host IP - only IP addresses are\n"
@@ -183,18 +183,14 @@ int main(int argc, char **argv) {
 
   if (!pkt || (ret = set_publish_variable_header(pkt, topic, strlen(topic)))) {
     printf("Error: Setting up packet.\n");
-    broker_disconnect(conn);
-    free_connection(conn);
-    free_packet(pkt);
-    return ret;
+    ret = UMQTT_ERROR;
+    goto free;
   }
 
   if ((ret = init_packet_payload(pkt, PUBLISH, (uint8_t *)msg, strlen(msg)))) {
     printf("Error: Attaching payload.\n");
-    broker_disconnect(conn);
-    free_connection(conn);
-    free_packet(pkt);
-    return ret;
+    ret = UMQTT_ERROR;
+    goto free;
   }
 
   finalise_packet(pkt);
@@ -213,6 +209,7 @@ int main(int argc, char **argv) {
     printf("Disconnecting from broker.\n");
   }
 
+free:
   broker_disconnect(conn);
   free_connection(conn);
   free_packet(pkt);
