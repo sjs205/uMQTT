@@ -125,9 +125,10 @@ umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
  */
 size_t send_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
-  size_t n = write(skt->sockfd, pkt->buf, *pkt->len);
+  size_t n = write(skt->sockfd, &pkt->buf, *pkt->len);
   if (n < 0)
     printf("ERROR: writing to socket\n");
+
   return n;
 }
 

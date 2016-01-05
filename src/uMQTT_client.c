@@ -109,13 +109,13 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   /* get response */
   struct mqtt_packet *pkt_resp;
   if (init_packet(&pkt_resp)) {
-    printf("Error: Allocatiing memory\n");
+    printf("Error: Allocating memory\n");
     return UMQTT_MEM_ERROR;
   }
 
   pkt_resp->len = conn->recieve_method(conn, &pkt_resp->raw);
   if (!pkt_resp->len) {
-    printf("Error: Connect Packet Failed\n");
+    printf("Error: Connect Response Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -154,7 +154,7 @@ umqtt_ret broker_send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
 /**
  * \brief Function to receive packets to the broker connection.
  * \param conn The connection to send the packet through.
- * \param pkt The Packet to send to the broker
+ * \param pkt The Packet to send to the broker.
  */
 umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
   if (conn->recieve_method && conn->recieve_method(conn, pkt)) {
@@ -189,7 +189,6 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
   return UMQTT_SUCCESS;
 }
 
-
 /**
  * \brief Function to send SUBSCRIBE packet to broker.
  * \param conn The connection to close.
@@ -198,41 +197,56 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
  */
 umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     size_t topic_len) {
-
   umqtt_ret ret = UMQTT_SUCCESS;
-  struct mqtt_packet *pkt = NULL;
-  struct mqtt_packet *sub_pkt = construct_default_packet(SUBSCRIBE, 0, 0);
-  if (!sub_pkt) {
-    printf("Error: SUBSCRIBE packet failed\n");
-    ret = UMQTT_ERROR;
+
+  /* send subscribe packet */
+  struct mqtt_packet *pkt = construct_default_packet(SUBSCRIBE, 0, 0);
+  if (!pkt) {
+    printf("Error: Creating subscribe packet\n");
+    return UMQTT_PACKET_ERROR;
+  }
+
+  set_subscribe_payload(pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
+  finalise_packet(pkt);
+  if (!conn->send_method(conn, &pkt->raw)) {
+    printf("Error: Broker connection failed\n");
+    free_packet(pkt);
+    return UMQTT_SEND_ERROR;
+  }
+
+  /* get response */
+  struct mqtt_packet *pkt_resp;
+  if (init_packet(&pkt_resp)) {
+    printf("Error: Allocatiing memory\n");
+
+    ret = UMQTT_MEM_ERROR;
     goto free;
   }
 
-  set_subscribe_payload(sub_pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
+  pkt_resp->len = conn->recieve_method(conn, &pkt_resp->raw);
+  if (!pkt_resp->len) {
+    printf("Error: Subscribe Failed\n");
 
-  if (conn->send_method(conn, (struct raw_pkt *)sub_pkt->raw.buf)) {
-    printf("Error: Failed to send packet\n");
-    ret = UMQTT_ERROR;
+    ret = UMQTT_CONNECT_ERROR;
     goto free;
   }
+  disect_raw_packet(pkt_resp);
 
-  /* Get response */
-  if (init_packet(&pkt)) {
-    printf("Error: Initialising packet\n");
-    ret = UMQTT_ERROR;
+  /* Processing response */
+  if (pkt_resp->fixed->generic.type == SUBACK && pkt->payload->data == 0x00) {
+    ret = UMQTT_SUCCESS;
     goto free;
-  }
 
-  pkt->len = conn->recieve_method(conn, &pkt->raw); 
-  disect_raw_packet(pkt);
-  if (pkt->fixed->generic.type != SUBACK && pkt->payload->data != 0x00) {
+  } else {
     printf("Error, incorrect SUBACK return\n");
-    ret = UMQTT_ERROR;
+    ret = UMQTT_CONNECT_ERROR;
+    goto free;
+
   }
 
 free:
 
-  free_packet(sub_pkt);
+  free_packet(pkt_resp);
   free_packet(pkt);
 
   return ret;

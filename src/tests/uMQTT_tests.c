@@ -108,6 +108,10 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
     printf("Packet sizes differ by %d\n", delta);
     printf("pkt1 len: %zu pkt2 len: %zu\n", pkt1->len, pkt2->len);
 
+    printf("\nPacket 1:\n");
+    print_packet(pkt1);
+    printf("\nPacket 2:\n");
+    print_packet(pkt2);
     return delta;
   }
 
@@ -121,6 +125,11 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
 
   if (!delta) {
     printf("Packets match exactly\n");
+  } else {
+    printf("\nPacket 1:\n");
+    print_packet(pkt1);
+    printf("\nPacket 2:\n");
+    print_packet(pkt2);
   }
 
   return delta;
@@ -144,7 +153,7 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
       /* default connect packet */
       uint8_t connect[19] = {
         0x10, 0x11, 0x00, 0x04, 0x4D, 0x51, 0x54, 0x54,
-        0x04, 0x00, 0x00, 0x00, 0x00, 0x05, 0x75, 0x4D,
+        0x04, 0x02, 0x00, 0x00, 0x00, 0x05, 0x75, 0x4D,
         0x51, 0x54, 0x54 };
       memcpy(pkt->raw.buf, connect, sizeof(connect));
       disect_raw_packet(pkt);
@@ -159,6 +168,16 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
         0x50, 0x55, 0x42, 0x4C, 0x49, 0x53, 0x48, 0x20,
         0x70, 0x61, 0x63, 0x6B, 0x65, 0x74, 0x00 };
       memcpy(pkt->raw.buf, publish, sizeof(publish));
+      disect_raw_packet(pkt);
+      break;
+
+    case SUBSCRIBE: ;
+      /* default subscribe packet */
+      uint8_t subscribe[17] = {
+        0x82, 0x0F, 0x00, 0x00, 0x00, 0x0A, 0x75, 0x4D,
+        0x51, 0x54, 0x54, 0x5F, 0x50, 0x55, 0x42, 0x00,
+        0x00 };
+      memcpy(pkt->raw.buf, subscribe, sizeof(subscribe));
       disect_raw_packet(pkt);
       break;
 
@@ -218,6 +237,18 @@ int test_packet_creation() {
   gen_pkt = construct_default_packet(type,
       (uint8_t *)"uMQTT test PUBLISH packet",
       sizeof("uMQTT test PUBLISH packet"));
+  delta = test_compare_packets(ctrl_pkt, gen_pkt);
+  if (delta) {
+    fails++;
+    printf("Creation of control packet type %d failed.\n", (int)type);
+  }
+  free_packet(ctrl_pkt);
+  free_packet(gen_pkt);
+
+  /* SUBSCRIBE packet */
+  type = SUBSCRIBE;
+  ctrl_pkt = create_manual_control_pkt(type);
+  gen_pkt = construct_default_packet(type, 0, 0);
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
