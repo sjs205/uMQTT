@@ -25,9 +25,21 @@
  *****************************************************************************/
 
 /**
+ * \brief Struct to store the MQTT client data.
+ * \param clientid The MQTT client ID
+ * \param username The client connection username
+ * \param password The client connection password
+ */
+struct mqtt_client {
+  char *clientid;
+  char *username;
+  char *password;
+};
+
+/**
  * \brief Struct to store an MQTT broker socket connection.
  * \param conn_state Current connection state.
- * \param context Pointer to context specific struct
+ * \param context Pointer to connection context specific struct
  * \param connect_method Function pointer to the connect method.
  * \param disconnect_method Function pointer to the disconnect method.
  * \param send_method Function pointer to the send method.
@@ -35,6 +47,7 @@
  * \param free_method Fuction to free the connect method and related context struct.
  */
 struct broker_conn {
+  struct mqtt_client client
   uint8_t state;
 
   void *context;

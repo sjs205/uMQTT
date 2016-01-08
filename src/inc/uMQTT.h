@@ -114,22 +114,6 @@ struct __attribute__((__packed__)) utf8_enc_str {
 };
 
 /**
- * \brief Struct to store the MQTT client data.
- */
-struct mqtt_client {
-  struct utf8_enc_str clientid;
-};
-
-/**
- * \brief Struct to store the MQTT configuration.
- */
-struct mqtt_conf {
-  struct utf8_enc_str *username;
-  struct utf8_enc_str *password;
-  struct utf8_enc_str *topic;
-};
-
-/**
  * \brief Struct to store a generic fixed header of a control packet.
  * \param type The type of control packet.
  * \param reserved Reserved for future use - see MQTT spec.
