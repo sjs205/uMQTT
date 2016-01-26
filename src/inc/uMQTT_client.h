@@ -47,7 +47,7 @@ struct mqtt_client {
  * \param free_method Fuction to free the connect method and related context struct.
  */
 struct broker_conn {
-  struct mqtt_client client
+  struct mqtt_client client;
   uint8_t state;
 
   void *context;
