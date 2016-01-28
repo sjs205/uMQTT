@@ -43,7 +43,7 @@ struct mqtt_client {
  * \param connect_method Function pointer to the connect method.
  * \param disconnect_method Function pointer to the disconnect method.
  * \param send_method Function pointer to the send method.
- * \param recieve_method Function pointer to the recieve method.
+ * \param receive_method Function pointer to the receive method.
  * \param free_method Fuction to free the connect method and related context struct.
  */
 struct broker_conn {
@@ -56,7 +56,8 @@ struct broker_conn {
   umqtt_ret (*disconnect_method)(struct broker_conn *);
 
   size_t (*send_method)(struct broker_conn *, struct raw_pkt *);
-  size_t (*recieve_method)(struct broker_conn *, struct raw_pkt *);
+  size_t (*receive_method)(struct broker_conn *, struct raw_pkt *);
+  size_t (*process_method)(struct broker_conn *, struct raw_pkt *);
 
   void (*free_method)(struct broker_conn *);
 };
@@ -66,10 +67,12 @@ void register_connection_methods(struct broker_conn *conn,
     umqtt_ret (*connect_method)(struct broker_conn *),
     umqtt_ret (*disconnect_method)(struct broker_conn *),
     size_t (*send_method)(struct broker_conn *,  struct raw_pkt *),
-    size_t (*recieve_method)(struct broker_conn *, struct raw_pkt *),
+    size_t (*receive_method)(struct broker_conn *, struct raw_pkt *),
+    size_t (*process_method)(struct broker_conn *, struct raw_pkt *),
     void (*free_method)(struct broker_conn *));
 umqtt_ret broker_send_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt);
+umqtt_ret broker_process_packet(struct broker_conn *conn, struct raw_pkt *pkt);
 umqtt_ret broker_connect(struct broker_conn *conn);
 umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
     size_t topic_len, uint8_t *payload, size_t pay_len);

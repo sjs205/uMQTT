@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
   }
 
   while (1) {
-    pkt->len = conn->recieve_method(conn, &pkt->raw); 
+    pkt->len = conn->receive_method(conn, &pkt->raw); 
     disect_raw_packet(pkt);
     if (verbose) {
       print_packet(pkt);

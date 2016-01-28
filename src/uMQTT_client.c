@@ -53,13 +53,14 @@ void init_connection(struct broker_conn **conn_p) {
  * \param connect_method Function pointer to the connect method.
  * \param disconnect_method Function pointer to the disconnect method.
  * \param send_method Function pointer to the send method.
- * \param recieve_method Function pointer to the recieve method.
+ * \param receive_method Function pointer to the receive method.
  */
 void register_connection_methods(struct broker_conn *conn,
     umqtt_ret (*connect_method)(struct broker_conn *),
     umqtt_ret (*disconnect_method)(struct broker_conn *),
     size_t (*send_method)(struct broker_conn *,  struct raw_pkt *),
-    size_t (*recieve_method)(struct broker_conn *, struct raw_pkt *),
+    size_t (*receive_method)(struct broker_conn *, struct raw_pkt *),
+    size_t (*process_method)(struct broker_conn *, struct raw_pkt *),
     void (*free_method)(struct broker_conn *)) {
 
   if (connect_method) {
@@ -74,8 +75,12 @@ void register_connection_methods(struct broker_conn *conn,
     conn->send_method = send_method;
   }
 
-  if (recieve_method) {
-    conn->recieve_method = recieve_method;
+  if (receive_method) {
+    conn->receive_method = receive_method;
+  }
+
+  if (process_method) {
+    conn->receive_method = receive_method;
   }
 
   if (free_method) {
@@ -115,7 +120,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     return UMQTT_MEM_ERROR;
   }
 
-  pkt_resp->len = conn->recieve_method(conn, &pkt_resp->raw);
+  pkt_resp->len = conn->receive_method(conn, &pkt_resp->raw);
   if (!pkt_resp->len) {
     printf("Error: Connect Response Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
@@ -159,7 +164,19 @@ umqtt_ret broker_send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
  * \param pkt The Packet to send to the broker.
  */
 umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  if (conn->recieve_method && conn->recieve_method(conn, pkt)) {
+  if (conn->receive_method && conn->receive_method(conn, pkt)) {
+    return UMQTT_SUCCESS;
+  }
+  return UMQTT_PACKET_ERROR;
+}
+
+/**
+ * \brief Function to process packets to the broker connection.
+ * \param conn The connection to send the packet through.
+ * \param pkt The Packet to send to the broker.
+ */
+umqtt_ret broker_process_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+  if (conn->process_method && conn->receive_method(conn, pkt)) {
     return UMQTT_SUCCESS;
   }
   return UMQTT_PACKET_ERROR;
@@ -225,7 +242,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     goto free;
   }
 
-  pkt_resp->len = conn->recieve_method(conn, &pkt_resp->raw);
+  pkt_resp->len = conn->receive_method(conn, &pkt_resp->raw);
   if (!pkt_resp->len) {
     printf("Error: Subscribe Failed\n");
 

@@ -60,7 +60,7 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
   memcpy(skt->ip, ip, ip_len);
 
   register_connection_methods(conn, linux_socket_connect,
-      linux_socket_disconnect, send_socket_packet, read_socket_packet,
+      linux_socket_disconnect, send_socket_packet, read_socket_packet, NULL,
       free_linux_socket);
 
   conn->context = skt;
@@ -133,9 +133,9 @@ size_t send_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
 }
 
 /**
- * \brief Function to recieve packet from the broker socket.
+ * \brief Function to receive packet from the broker socket.
  * \param conn Pointer to the croker_conn struct.
- * \param pkt Pointer to the reciever buffer/packet.
+ * \param pkt Pointer to the receiver buffer/packet.
  * \return Number of bytes read.
  */
 size_t read_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
