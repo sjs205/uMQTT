@@ -33,7 +33,7 @@
 
 /* ip of test.mosquitto.org - need to perform dns lookup
    using gethostbyname */
-#define MQTT_BROKER_IP        "85.119.83.194"
+#define MQTT_BROKER_IP        "127.0.0.1"
 #define MQTT_BROKER_PORT      1883
 
 int main() {

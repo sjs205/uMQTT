@@ -147,11 +147,14 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len) {
 
-      pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic_name, topic, topic_len);
+  pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic_name, topic, topic_len);
 
-      if (pkt->fixed->publish.qos) {
-        /* set packet identifier */
-      }
+  if (pkt->fixed->publish.qos) {
+    /* set packet identifier */
+  }
+
+  /* recalculate pay->len */
+  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return UMQTT_SUCCESS;
 }
@@ -164,6 +167,9 @@ umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt) {
 
   /* At present it isn't clear if this is required when qos = 0 */
   pkt->variable->generic.pkt_id = 0x0000;
+
+  /* recalculate pay->len */
+  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return UMQTT_SUCCESS;
 }
@@ -223,7 +229,8 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
       return UMQTT_ERROR;
   }
 
-  pkt->len += pkt->pay_len;
+  /* recalculate pay->len */
+  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return UMQTT_SUCCESS;
 }
@@ -238,9 +245,14 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos) {
 
+  /* set topic */
   pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
       topic, topic_len) + 1;
+  /* set topic QOS */
   *(&pkt->payload->data + pkt->pay_len - 1) = (0x03 & qos);
+
+  /* recalculate pay->len */
+  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return UMQTT_SUCCESS;
 }
@@ -320,6 +332,9 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
   }
 
   /* Free unused space */
+
+  /* recalculate pay->len */
+  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return delta;
 }

@@ -27,6 +27,8 @@
 
 #include "uMQTT.h"
 #include "uMQTT_client.h"
+#include "uMQTT_client.h"
+#include "uMQTT_helper.h"
 
 /**
  * \brief Function to allocate memory for a broker connection struct.
@@ -191,7 +193,7 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
 
 /**
  * \brief Function to send SUBSCRIBE packet to broker.
- * \param conn The connection to close.
+ * \param conn The connection to SUBSCRIBE on.
  * \param topic The topic for which the message should be published.
  * \param topic_len The length of the topic.
  */
@@ -208,7 +210,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
 
   set_subscribe_payload(pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
   finalise_packet(pkt);
-  if (!conn->send_method(conn, &pkt->raw)) {
+  if (!conn->send_method(conn, (struct raw_pkt *)pkt->raw.buf)) {
     printf("Error: Broker connection failed\n");
     free_packet(pkt);
     return UMQTT_SEND_ERROR;

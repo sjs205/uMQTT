@@ -57,7 +57,7 @@ static int print_usage() {
       " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
       "\n"
       "Broker options:\n"
-      " -H [--host] <host-IP>    : Change the default host IP - only IP addresses are\n"
+      " -b [--broker] <broker-IP>: Change the default broker IP - only IP addresses are\n"
       "                            currently supported. Default: test.mosquitto.org\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
       "\n");
@@ -70,9 +70,9 @@ int main(int argc, char **argv) {
   int ret;
   int c, option_index = 0;
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
-  char host_ip[16] = MQTT_BROKER_IP;
+  char broker_ip[16] = MQTT_BROKER_IP;
   char msg[1024];
-  int host_port = MQTT_BROKER_PORT;
+  int broker_port = MQTT_BROKER_PORT;
   int verbose = 0;
 
   static struct option long_options[] =
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     {"help",   no_argument,             0, 'h'},
     {"verbose", no_argument,            0, 'v'},
     {"topic", required_argument,        0, 't'},
-    {"host", required_argument,         0, 'H'},
+    {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
     {0, 0, 0, 0}
   };
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hvt:H:p:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hvt:b:p:", long_options, &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -110,12 +110,12 @@ int main(int argc, char **argv) {
           }
           break;
 
-        case 'H':
-          /* change the default host ip */
+        case 'b':
+          /* change the default broker ip */
           if (optarg) {
-            strcpy(host_ip, optarg);
+            strcpy(broker_ip, optarg);
           } else {
-            printf("Error: The host flag should be followed by an IP address.\n");
+            printf("Error: The broker flag should be followed by an IP address.\n");
             return print_usage();
           }
           break;
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
         case 'p':
           /* change the default port */
           if (optarg) {
-            host_port = *optarg;
+            broker_port = *optarg;
           } else {
             printf("Error: The port flag should be followed by a port.\n");
             return print_usage();
@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
   if (verbose) {
     printf("Initialisig socket connection\n");
   }
-  init_linux_socket_connection(&conn, host_ip, sizeof(host_ip), host_port);
+  init_linux_socket_connection(&conn, broker_ip, sizeof(broker_ip), broker_port);
   if (!conn) {
     printf("XError: Initialising socket connection\n");
     return -1;
