@@ -58,9 +58,9 @@ void init_connection(struct broker_conn **conn_p) {
 void register_connection_methods(struct broker_conn *conn,
     umqtt_ret (*connect_method)(struct broker_conn *),
     umqtt_ret (*disconnect_method)(struct broker_conn *),
-    size_t (*send_method)(struct broker_conn *,  struct raw_pkt *),
-    size_t (*receive_method)(struct broker_conn *, struct raw_pkt *),
-    size_t (*process_method)(struct broker_conn *, struct raw_pkt *),
+    umqtt_ret (*send_method)(struct broker_conn *,  struct mqtt_packet *),
+    umqtt_ret (*receive_method)(struct broker_conn *, struct mqtt_packet *),
+    umqtt_ret (*process_method)(struct broker_conn *, struct mqtt_packet *),
     void (*free_method)(struct broker_conn *)) {
 
   if (connect_method) {
@@ -80,7 +80,7 @@ void register_connection_methods(struct broker_conn *conn,
   }
 
   if (process_method) {
-    conn->receive_method = receive_method;
+    conn->process_method = process_method;
   }
 
   if (free_method) {
@@ -88,6 +88,124 @@ void register_connection_methods(struct broker_conn *conn,
   }
 
   return;
+}
+
+/**
+ * \brief Function to allocate memory for an mqtt_process_methods struct.
+ * \param proc Pointer to the address of the new mqtt_process_methods struct.
+ * \return umqtt_ret return code.
+ */
+umqtt_ret init_process_methods(struct mqtt_process_methods **proc_p) {
+  struct mqtt_process_methods *proc;
+
+  if (!(proc = calloc(1, sizeof(struct mqtt_process_methods)))) {
+    printf("Error: Allocating space for MQTT process methods failed.\n");
+    free_process_methods(proc);
+    return UMQTT_MEM_ERROR;
+  }
+
+  *proc_p = proc;
+
+  return UMQTT_SUCCESS;
+}
+
+/**
+ * \brief Function to register implementation specific process methods.
+ * \param connect_method Function pointer to connect packet overload method
+ * \param connack_method Function pointer to conack packet overload method
+ * \param publish_method Function pointer to publish packet overload method
+ * \param puback_method Function pointer to puback packet overload method
+ * \param pubrel_method Function pointer to pubrel packet overload method
+ * \param pubcomp_method Function pointer to pubcomp packet overload method
+ * \param pubrec_method Function pointer to pubrec packet overload method
+ * \param subscribe_method Function pointer to subscribe packet overload method
+ * \param unsubscribe_method Function pointer to unsubscribe packet overload method
+ * \param suback_method Function pointer to suback packet overload method
+ * \param unsuback_method Function pointer to unsuback packet overload method
+ * \param pingreq_method Function pointer to pingreq packet overload method
+ * \param pingresp_method Function pointer to pingresp packet overload method
+ * \param disconnect_method Function pointer to disconnect packet overload method
+ */
+umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
+  umqtt_ret (*connect_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*connack_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*publish_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*puback_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*pubrel_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*pubcomp_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*pubrec_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*subscribe_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*unsubscribe_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*suback_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*unsuback_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*pingreq_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*pingresp_method)(struct broker_conn *, struct mqtt_packet *),
+  umqtt_ret (*disconnect_method)(struct broker_conn *, struct mqtt_packet *)) {
+
+  struct mqtt_process_methods *proc;
+  if (init_process_methods(&proc)) {
+    printf("Error: Allocating memory\n");
+    return UMQTT_MEM_ERROR;
+  }
+
+  if (connect_method) {
+    proc->connect_method = connect_method;
+  }
+
+  if (connack_method) {
+    proc->connack_method = connack_method;
+  }
+
+  if (publish_method) {
+    proc->publish_method = publish_method;
+  }
+
+  if (puback_method) {
+    proc->puback_method = puback_method;
+  }
+
+  if (pubrel_method) {
+    proc->pubrel_method = pubrel_method;
+  }
+
+  if (pubcomp_method) {
+    proc->pubcomp_method = pubcomp_method;
+  }
+
+  if (pubrec_method) {
+    proc->pubrec_method = pubrec_method;
+  }
+
+  if (subscribe_method) {
+    proc->subscribe_method = subscribe_method;
+  }
+
+  if (unsubscribe_method) {
+    proc->unsubscribe_method = unsubscribe_method;
+  }
+
+  if (suback_method) {
+    proc->suback_method = suback_method;
+  }
+
+  if (unsuback_method) {
+    proc->unsuback_method = unsuback_method;
+  }
+
+  if (pingreq_method) {
+    proc->pingreq_method = pingreq_method;
+  }
+
+  if (pingresp_method) {
+    proc->pingresp_method = pingresp_method;
+  }
+
+  if (disconnect_method) {
+    proc->disconnect_method = disconnect_method;
+  }
+
+  *proc_p = proc;
+  return UMQTT_SUCCESS;
 }
 
 /**
@@ -105,10 +223,10 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
 
   /* send connect packet */
   struct mqtt_packet *pkt = construct_default_packet(CONNECT, 0, 0);
-  size_t ret = conn->send_method(conn, &pkt->raw);
+  size_t ret = conn->send_method(conn, pkt);
   free_packet(pkt);
 
-  if (!ret) {
+  if (ret) {
     printf("Error: Connect Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
   }
@@ -120,29 +238,20 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     return UMQTT_MEM_ERROR;
   }
 
-  pkt_resp->len = conn->receive_method(conn, &pkt_resp->raw);
-  if (!pkt_resp->len) {
-    printf("Error: Connect Response Packet Failed\n");
-    return UMQTT_CONNECT_ERROR;
+  uint8_t count = 0;
+
+  do {
+    ret = conn->receive_method(conn, pkt_resp);
+    if (ret) {
+      printf("Error: Connect Response Packet Failed\n");
+      return ret;
+    }
+  } while (conn->state != UMQTT_CONNECTED && count++ < MAX_RESP_PKT_RETRIES);
+
+  if (conn->state != UMQTT_CONNECTED) {
+    ret = UMQTT_CONNECT_ERROR;
   }
-
-  disect_raw_packet(pkt_resp);
-
-  /* Processing response */
-  if (pkt_resp->fixed->generic.type == CONNACK &&
-      pkt_resp->variable->connack.connect_ret == CONN_ACCEPTED) {
-    conn->state = 1;
-    free_packet(pkt_resp);
-
     return UMQTT_SUCCESS;
-
-  } else {
-    printf("Error: Failed to connect the MQTT broker.\n");
-    free_packet(pkt_resp);
-
-    return UMQTT_CONNECT_ERROR;
-
-  }
 }
 
 /**
@@ -150,36 +259,219 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
  * \param conn The connection to send the packet through.
  * \param pkt The Packet to send to the broker
  */
-umqtt_ret broker_send_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  if (conn->send_method && conn->send_method(conn, pkt)) {
-    return UMQTT_SUCCESS;
+umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
+  umqtt_ret ret = UMQTT_SUCCESS;
+  if (conn->send_method) {
+    ret = conn->send_method(conn, pkt);
+  } else {
+    ret = UMQTT_SEND_ERROR;
   }
-  return UMQTT_PACKET_ERROR;
+  return ret;
 }
-
 
 /**
  * \brief Function to receive packets to the broker connection.
- * \param conn The connection to send the packet through.
- * \param pkt The Packet to send to the broker.
+ * \param conn The connection to receive the packet through.
+ * \param pkt Pointer to the incoming packet.
  */
-umqtt_ret broker_receive_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  if (conn->receive_method && conn->receive_method(conn, pkt)) {
-    return UMQTT_SUCCESS;
+umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  if (conn->receive_method) {
+    ret = conn->receive_method(conn, pkt);
+  } else {
+    ret = UMQTT_RECEIVE_ERROR;
   }
-  return UMQTT_PACKET_ERROR;
+
+  return ret;
 }
 
 /**
  * \brief Function to process packets to the broker connection.
  * \param conn The connection to send the packet through.
- * \param pkt The Packet to send to the broker.
+ * \param pkt The packet to be processed.
  */
-umqtt_ret broker_process_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
-  if (conn->process_method && conn->receive_method(conn, pkt)) {
-    return UMQTT_SUCCESS;
+umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+
+  switch (pkt->fixed->generic.type) {
+
+    case CONNECT:
+      if (conn->proc && conn->proc->connect_method) {
+        ret = conn->proc->connect_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case CONNACK:
+      if (conn->proc && conn->proc->connack_method) {
+        ret = conn->proc->connack_method(conn, pkt);
+
+      } else {
+        /* Processing response */
+        if (pkt->variable->connack.connect_ret == CONN_ACCEPTED) {
+          conn->state = UMQTT_CONNECTED;
+        } else {
+          conn->state = UMQTT_DISCONNECTED;
+          printf("Error: Failed to connect the MQTT broker.\n");
+          ret = UMQTT_CONNECT_ERROR;
+        }
+      }
+      break;
+
+    case PUBLISH:
+      if (conn->proc && conn->proc->publish_method) {
+        ret = conn->proc->publish_method(conn, pkt);
+
+      } else {
+        print_publish_packet(pkt);
+      }
+      break;
+
+    case PUBACK:
+      if (conn->proc && conn->proc->puback_method) {
+        ret = conn->proc->puback_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet type not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case PUBCOMP:
+      if (conn->proc && conn->proc->pubcomp_method) {
+        ret = conn->proc->pubcomp_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet type not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case PUBREL:
+      if (conn->proc && conn->proc->pubrel_method) {
+        ret = conn->proc->pubrel_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet type not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case PUBREC:
+      if (conn->proc && conn->proc->pubrec_method) {
+        ret = conn->proc->pubrec_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet type not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case SUBSCRIBE:
+      if (conn->proc && conn->proc->subscribe_method) {
+        ret = conn->proc->subscribe_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet type not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case UNSUBSCRIBE:
+      if (conn->proc && conn->proc->unsubscribe_method) {
+        ret = conn->proc->unsubscribe_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet type not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case SUBACK:
+      if (conn->proc && conn->proc->suback_method) {
+        ret = conn->proc->suback_method(conn, pkt);
+
+      } else {
+        int i = 0;
+        for (i = 0; i < conn->sub_count; i++) {
+          if (pkt->variable->generic.pkt_id == conn->subs[i]->variable->generic.pkt_id) {
+            if (pkt->payload->data == 0x00) {
+              pkt->fixed->generic.type = SUBACK;
+              printf("SUBACK\n");
+            } else {
+              printf("Error, bad SUBACK return: 0x%X\n", pkt->payload->data);
+              ret = UMQTT_CONNECT_ERROR;
+            }
+            break;
+          }
+        }
+      }
+      break;
+
+    case UNSUBACK:
+      if (conn->proc && conn->proc->unsuback_method) {
+        ret = conn->proc->unsuback_method(conn, pkt);
+
+      } else {
+        /* not currently supported */
+        printf("Error: MQTT packet type not currently supported.\n");
+        ret = UMQTT_PKT_NOT_SUPPORTED;
+      }
+      break;
+
+    case PINGREQ:
+      if (conn->proc && conn->proc->pingreq_method) {
+        ret = conn->proc->pingreq_method(conn, pkt);
+
+      } else {
+        printf("\nPING\n\n");
+        /* send PINGRESP */
+        struct mqtt_packet *pkt_resp = construct_default_packet(PINGRESP, 0, 0);
+        if (conn->send_method(conn, pkt)) {
+          printf("Error: Failed to send PINGRESP packet\n");
+          ret = UMQTT_PACKET_ERROR;
+        }
+        free_packet(pkt_resp);
+      }
+      break;
+
+    case PINGRESP:
+      if (conn->proc && conn->proc->pingresp_method) {
+        ret = conn->proc->pingresp_method(conn, pkt);
+
+      } else {
+        conn->state = UMQTT_CONNECTED;
+        printf("\nPONG\n\n");
+      }
+      break;
+
+    case DISCONNECT:
+      if (conn->proc && conn->proc->disconnect_method) {
+        ret = conn->proc->disconnect_method(conn, pkt);
+
+      } else {
+        conn->state = UMQTT_DISCONNECTED;
+      }
+      break;
+
+    default:
+      printf("Error: MQTT packet type not currently supported.\n");
+      ret = UMQTT_PKT_NOT_SUPPORTED;
   }
-  return UMQTT_PACKET_ERROR;
+
+  return ret;
 }
 
 /**
@@ -200,7 +492,7 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
     return UMQTT_ERROR;
   }
 
-  if (conn->send_method(conn, (struct raw_pkt *)pkt->raw.buf)) {
+  if (conn->send_method(conn, pkt)) {
     printf("Error: Failed to send packet\n");
     return UMQTT_ERROR;
   }
@@ -227,46 +519,39 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
 
   set_subscribe_payload(pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
   finalise_packet(pkt);
-  if (!conn->send_method(conn, (struct raw_pkt *)pkt->raw.buf)) {
+
+  /* register subscription */
+  conn->subs[conn->sub_count] = pkt;
+
+  ret = conn->send_method(conn, pkt);
+  if (ret) {
     printf("Error: Broker connection failed\n");
     free_packet(pkt);
-    return UMQTT_SEND_ERROR;
+    return ret;
   }
 
   /* get response */
   struct mqtt_packet *pkt_resp;
   if (init_packet(&pkt_resp)) {
-    printf("Error: Allocatiing memory\n");
-
-    ret = UMQTT_MEM_ERROR;
-    goto free;
+    printf("Error: Allocating memory\n");
+    return UMQTT_MEM_ERROR;
   }
 
-  pkt_resp->len = conn->receive_method(conn, &pkt_resp->raw);
-  if (!pkt_resp->len) {
-    printf("Error: Subscribe Failed\n");
+  uint8_t count = 0;
 
-    ret = UMQTT_CONNECT_ERROR;
-    goto free;
+  do {
+    ret = conn->receive_method(conn, pkt_resp);
+    if (ret) {
+      printf("Error: Subscribe Response Packet Failed\n");
+      return ret;
+    }
+  } while (pkt_resp->fixed->generic.type != SUBACK && count++ < MAX_RESP_PKT_RETRIES);
+
+  if (pkt_resp->fixed->generic.type != SUBACK) {
+    ret = UMQTT_SUBSCRIBE_ERROR;
   }
-  disect_raw_packet(pkt_resp);
-
-  /* Processing response */
-  if (pkt_resp->fixed->generic.type == SUBACK && pkt->payload->data == 0x00) {
-    ret = UMQTT_SUCCESS;
-    goto free;
-
-  } else {
-    printf("Error, incorrect SUBACK return\n");
-    ret = UMQTT_CONNECT_ERROR;
-    goto free;
-
-  }
-
-free:
 
   free_packet(pkt_resp);
-  free_packet(pkt);
 
   return ret;
 }
@@ -285,9 +570,10 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
       return UMQTT_DISCONNECT_ERROR;
     }
 
-    if (!conn->send_method(conn, &pkt->raw)) {
+    if (!conn->send_method(conn, pkt)) {
       return UMQTT_PACKET_ERROR;
     }
+
     free_packet(pkt);
   }
 
@@ -295,7 +581,20 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
     return UMQTT_DISCONNECT_ERROR;
   }
 
+  conn->state = UMQTT_DISCONNECTED;
   return UMQTT_SUCCESS;
+}
+
+/**
+ * \brief Function to free memory allocated to struct mqtt_packet.
+ * \param pkt The packet to free.
+ */
+void free_process_methods(struct mqtt_process_methods *proc) {
+  if (proc) {
+    free(proc);
+  }
+
+  return;
 }
 
 /**
@@ -306,6 +605,8 @@ void free_connection(struct broker_conn *conn) {
   if (conn->free_method) {
     conn->free_method(conn);
   }
+
+  free_process_methods(conn->proc);
 
   if (conn) {
     free(conn);

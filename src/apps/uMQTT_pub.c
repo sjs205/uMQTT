@@ -199,7 +199,7 @@ int main(int argc, char **argv) {
     printf("Sending packet to broker\n");
   }
 
-  if ((ret = broker_send_packet(conn, &pkt->raw))) {
+  if ((ret = broker_send_packet(conn, pkt))) {
     printf("Error: Sending packet failed.\n");
 
   } else if (verbose) {

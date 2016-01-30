@@ -60,10 +60,12 @@ typedef enum {
   UMQTT_ERROR,
   UMQTT_MEM_ERROR,
   UMQTT_CONNECT_ERROR,
+  UMQTT_SUBSCRIBE_ERROR,
   UMQTT_DISCONNECT_ERROR,
   UMQTT_SEND_ERROR,
-  UMQTT_RECIEVE_ERROR,
+  UMQTT_RECEIVE_ERROR,
   UMQTT_PACKET_ERROR,
+  UMQTT_PKT_NOT_SUPPORTED,
 } umqtt_ret;
 
 /**
@@ -88,6 +90,15 @@ typedef enum {
   RESERVED_15
 } __attribute__((__packed__)) ctrl_pkt_type;
 
+/**
+ * \brief Connect return codes.
+ */
+typedef enum {
+  QOS_AT_MOST_ONCE,
+  QOS_AT_LEAST_ONCE,
+  QOS_EXACTLY_ONCE,
+  QOS_RESERVED,
+} __attribute__((__packed__)) qos_t;
 /**
  * \brief Connect return codes.
  */
@@ -134,7 +145,7 @@ struct __attribute__((__packed__)) pkt_generic_fixed_header {
 struct __attribute__((__packed__)) pkt_publish_fixed_header {
 
   uint8_t retain                  : 1;
-  uint8_t qos                     : 2;
+  qos_t qos                       : 2;
   uint8_t dup                     : 1;
   ctrl_pkt_type                   : 4;
 };
@@ -197,11 +208,11 @@ struct connack_variable_header {
 
 /**
  * \brief Struct to store the variable header of a PUBLISH control packet.
- * \param topic_name The information channel to which the payload data is published.
+ * \param topic The information channel to which the payload data is published.
  * \param pkt_id The packet identifier - only required for qos = 1 or 2.
  */
 struct publish_variable_header {
-  struct utf8_enc_str topic_name;
+  struct utf8_enc_str topic;
   uint16_t pkt_id                 : 16;
 };
 

@@ -64,7 +64,7 @@ int main() {
       sizeof("uMQTT test PUBLISH packet"));
 
   print_packet(pub_pkt);
-  conn->send_method(conn, (struct raw_pkt *)pub_pkt->raw.buf);
+  conn->send_method(conn, pub_pkt);
 
   free_packet(pub_pkt);
 

@@ -23,6 +23,7 @@
  *
  *****************************************************************************/
 #include <stdio.h>
+#include <string.h>
 
 #include "uMQTT_helper.h"
 
@@ -120,7 +121,6 @@ void print_memory_bytes_hex(void *ptr, size_t len) {
 /**
  * \brief Function to print a packet.
  * \param pkt Pointer to the packet to be printed
- * \param len The number of bytes to print.
  */
 void print_packet(struct mqtt_packet *pkt) {
 
@@ -151,3 +151,26 @@ void print_packet(struct mqtt_packet *pkt) {
   print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
 }
 
+/**
+ * \brief Function to print a PUBLISH packet.
+ * \param pkt Pointer to the publish packet to be printed
+ */
+void print_publish_packet(struct mqtt_packet *pkt) {
+
+  if (pkt->fixed->generic.type == PUBLISH) {
+    char buf[1024];
+
+    printf("\nPUBLISH MSG\n");
+
+    uint16_t len = (uint16_t)(pkt->variable->publish.topic.len_lsb | (8 << pkt->variable->publish.topic.len_msb));
+    strncpy(buf, &pkt->variable->publish.topic.utf8_str, len);
+    buf[len] = '\0';
+    printf("TOPIC: %s\n", buf);
+
+    strncpy(buf, (char *)&pkt->payload->data, pkt->pay_len);
+    buf[pkt->pay_len] = '\0';
+    printf("PAYLOAD:\n%s\n", buf);
+  }
+
+  return;
+}

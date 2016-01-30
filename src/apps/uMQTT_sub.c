@@ -186,14 +186,11 @@ int main(int argc, char **argv) {
   }
 
   while (1) {
-    pkt->len = conn->receive_method(conn, &pkt->raw); 
-    disect_raw_packet(pkt);
+    ret = conn->receive_method(conn, pkt); 
+
     if (verbose) {
       print_packet(pkt);
-    } else {
-      /*  process packet */
     }
-
   }
 
 free:

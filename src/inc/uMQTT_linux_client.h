@@ -47,7 +47,7 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
     unsigned int port);
 umqtt_ret linux_socket_connect(struct broker_conn *conn);
 umqtt_ret linux_socket_disconnect(struct broker_conn *conn);
-size_t send_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt);
-size_t read_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt);
+umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt);
 void free_linux_socket(struct broker_conn *conn);
 #endif              /* UMQTT_LINUX_CLIENT__H */

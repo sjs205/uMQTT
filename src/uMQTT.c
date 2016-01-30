@@ -147,7 +147,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len) {
 
-  pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic_name, topic, topic_len);
+  pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic, topic, topic_len);
 
   if (pkt->fixed->publish.qos) {
     /* set packet identifier */
@@ -354,6 +354,9 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
 
   pkt->len += pkt->fix_len;
 
+  /* assign variable header */
+  pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
+
   switch (pkt->fixed->generic.type) {
     case CONNECT:
       pkt->var_len = sizeof(struct connect_variable_header);
@@ -364,7 +367,16 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
       break;
 
     case PUBLISH:
-      pkt->var_len = sizeof(struct publish_variable_header);
+      pkt->var_len = (pkt->variable->publish.topic.len_lsb |
+          (8 << pkt->variable->publish.topic.len_msb));
+      /* utf8 encoded string len */ 
+      pkt->var_len += 2;
+
+      if (pkt->fixed->publish.qos == QOS_AT_LEAST_ONCE ||
+          pkt->fixed->publish.qos == QOS_EXACTLY_ONCE) {
+        /* pkt_id size */
+        pkt->var_len += sizeof(qos_t);
+      }
       break;
 
     case PUBACK:
@@ -388,9 +400,6 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
     default:
       printf("Error: MQTT packet type not currently supported.\n");
   }
-  /* assign variable header */
-  pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
-
   /* assign payload */
   pkt->pay_len = pkt->len - (pkt->fix_len + pkt->var_len);
   pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];

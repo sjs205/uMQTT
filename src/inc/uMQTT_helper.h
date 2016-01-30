@@ -45,4 +45,5 @@
 char *get_type_string(ctrl_pkt_type type);
 void print_memory_bytes_hex(void *ptr, size_t len);
 void print_packet(struct mqtt_packet *pkt);
+void print_publish_packet(struct mqtt_packet *pkt);
 #endif                /* UMQTT__H */

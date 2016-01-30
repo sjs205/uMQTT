@@ -75,9 +75,9 @@ int main() {
      a PUBLISH msg. */
   printf("\n\nSending Packet\n--------------\n");
   print_packet(sub_pkt);
-  conn->send_method(conn, (struct raw_pkt *)sub_pkt->raw.buf);
+  conn->send_method(conn, sub_pkt);
 
-  pkt->len = conn->receive_method(conn, &pkt->raw); 
+  pkt->len = conn->receive_method(conn, pkt); 
   disect_raw_packet(pkt);
   if (pkt->fixed->generic.type != SUBACK && pkt->payload->data != 0x00) {
     printf("Error, incorrect SUBACK return\n");
@@ -90,10 +90,10 @@ int main() {
   /* PUBLISH message */
   printf("\n\nSending Packet\n--------------\n");
   print_packet(pub_pkt);
-  conn->send_method(conn, (struct raw_pkt *)pub_pkt->raw.buf);
+  conn->send_method(conn, pub_pkt);
 
   /* Wait for first message - should be the PUBLISH */
-  pkt->len = conn->receive_method(conn, &pkt->raw); 
+  pkt->len = conn->receive_method(conn, pkt); 
   printf("\n\nReceived Packet\n---------------\n");
   disect_raw_packet(pkt);
   print_packet(pkt);

@@ -60,8 +60,8 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
   memcpy(skt->ip, ip, ip_len);
 
   register_connection_methods(conn, linux_socket_connect,
-      linux_socket_disconnect, send_socket_packet, read_socket_packet, NULL,
-      free_linux_socket);
+      linux_socket_disconnect, send_socket_packet, read_socket_packet,
+      broker_process_packet, free_linux_socket);
 
   conn->context = skt;
   *conn_p = conn;
@@ -123,13 +123,16 @@ umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
  * \param conn Pointer to the croker_conn struct.
  * \param pkt Pointer to the packet to be sent.
  */
-size_t send_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
+  umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
-  size_t n = write(skt->sockfd, &pkt->buf, *pkt->len);
-  if (n < 0)
+  int n = write(skt->sockfd, &pkt->raw.buf, *pkt->raw.len);
+  if (n < 0) {
     printf("ERROR: writing to socket\n");
+    ret = UMQTT_SEND_ERROR;
+  }
 
-  return n;
+  return ret;
 }
 
 /**
@@ -138,13 +141,22 @@ size_t send_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
  * \param pkt Pointer to the receiver buffer/packet.
  * \return Number of bytes read.
  */
-size_t read_socket_packet(struct broker_conn *conn, struct raw_pkt *pkt) {
+umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
+  umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
-  size_t n = read(skt->sockfd, &pkt->buf, sizeof(pkt->buf) - 1);
-  if (n < 0)
+
+  pkt->len = read(skt->sockfd, &pkt->raw.buf, sizeof(pkt->raw.buf) - 1);
+  if (pkt->raw.len < 0) {
     printf("ERROR: reading from socket\n");
-  
-  return n;
+    ret = UMQTT_SEND_ERROR;
+  } else {
+    disect_raw_packet(pkt);
+    /* can we process the message? */
+    if (conn->process_method) {
+      ret = conn->process_method(conn, pkt);
+    }
+  }
+  return ret;
 }
 
 /**
