@@ -216,6 +216,8 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
  */
 umqtt_ret broker_connect(struct broker_conn *conn) {
 
+  umqtt_ret ret = UMQTT_SUCCESS;
+
   if (conn->connect_method && conn->connect_method(conn)) {
     printf("Error: Broker connection failed\n");
     return UMQTT_CONNECT_ERROR;
@@ -223,18 +225,21 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
 
   /* send connect packet */
   struct mqtt_packet *pkt = construct_default_packet(CONNECT, 0, 0);
-  size_t ret = conn->send_method(conn, pkt);
-  free_packet(pkt);
 
+  ret = conn->send_method(conn, pkt);
+  free_packet(pkt);
   if (ret) {
     printf("Error: Connect Packet Failed\n");
     return UMQTT_CONNECT_ERROR;
   }
 
+
+
   /* get response */
   struct mqtt_packet *pkt_resp;
   if (init_packet(&pkt_resp)) {
     printf("Error: Allocating memory\n");
+    free_packet(pkt);
     return UMQTT_MEM_ERROR;
   }
 
@@ -244,14 +249,17 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     ret = conn->receive_method(conn, pkt_resp);
     if (ret) {
       printf("Error: Connect Response Packet Failed\n");
-      return ret;
+      break;
     }
   } while (conn->state != UMQTT_CONNECTED && count++ < MAX_RESP_PKT_RETRIES);
+
+  free_packet(pkt_resp);
 
   if (conn->state != UMQTT_CONNECTED) {
     ret = UMQTT_CONNECT_ERROR;
   }
-    return UMQTT_SUCCESS;
+
+  return UMQTT_SUCCESS;
 }
 
 /**
@@ -543,6 +551,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     ret = conn->receive_method(conn, pkt_resp);
     if (ret) {
       printf("Error: Subscribe Response Packet Failed\n");
+      free_packet(pkt_resp);
       return ret;
     }
   } while (pkt_resp->fixed->generic.type != SUBACK && count++ < MAX_RESP_PKT_RETRIES);
@@ -562,6 +571,8 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
  */
 umqtt_ret broker_disconnect(struct broker_conn *conn) {
 
+  umqtt_ret ret = UMQTT_SUCCESS;
+
   if (conn->state) {
     /* disconnect from active session */
     struct mqtt_packet *pkt = construct_default_packet(DISCONNECT, 0, 0);
@@ -570,7 +581,9 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
       return UMQTT_DISCONNECT_ERROR;
     }
 
-    if (!conn->send_method(conn, pkt)) {
+    ret = conn->send_method(conn, pkt);
+    if (ret) {
+      free_packet(pkt);
       return UMQTT_PACKET_ERROR;
     }
 
@@ -602,6 +615,7 @@ void free_process_methods(struct mqtt_process_methods *proc) {
  * \param conn The connection to free.
  */
 void free_connection(struct broker_conn *conn) {
+
   if (conn->free_method) {
     conn->free_method(conn);
   }

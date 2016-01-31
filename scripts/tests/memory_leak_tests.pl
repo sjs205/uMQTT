@@ -205,6 +205,26 @@ sub uMQTT_pub_test
 }
 
 #
+# TEST: uMQTT_sub_test
+#
+sub uMQTT_sub_test
+{
+  my ($num, $results_ref) = @_;
+
+  my $name = "uMQTT_sub_test";
+  my $exp_rc = 0;
+  my $ret = 0;
+  my $cmd = $valgrind_cmd . "bin/uMQTT_sub_test",
+
+  print "\n**** TEST: $num - $name ****\n\n";
+  print "\tExec command:\n\t$cmd\n";
+
+  $ret = run_test($cmd, $num, $name, $exp_rc, $results_ref);
+
+  return $ret;
+}
+
+#
 # START TESTS
 #
 my $error;
@@ -217,9 +237,13 @@ if (uMQTT_pub_test($test_no++, \@results) != 0)
 {
   $error = -1;
 }
+if (uMQTT_sub_test($test_no++, \@results) != 0)
+{
+  $error = -1;
+}
 
 # END OF TESTS
 print_result_table(\@results);
 
-print "\ndone: " . ($error ? "" : "No") . "Errors Detected\n";
+print "\ndone: " . ($error ? " " : "No ") . "Errors Detected\n";
 exit($error);

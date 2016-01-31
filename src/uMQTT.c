@@ -520,6 +520,7 @@ int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
  * \param pkt The packet to free.
  */
 void free_packet(struct mqtt_packet *pkt) {
+
   if (pkt) {
     free(pkt);
   }

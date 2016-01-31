@@ -33,7 +33,7 @@
 
 /* ip of test.mosquitto.org - need to perform dns lookup
    using gethostbyname */
-#define MQTT_BROKER_IP        "127.0.0.1"
+#define MQTT_BROKER_IP        "85.119.83.194"
 #define MQTT_BROKER_PORT      1883
 
 int main() {
@@ -62,8 +62,8 @@ int main() {
   /* subscribe packet */
   struct mqtt_packet *sub_pkt = construct_default_packet(SUBSCRIBE, 0, 0);
   struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH, 0, 0);
-
   struct mqtt_packet *pkt = NULL;
+
   if (init_packet(&pkt)) {
     printf("Error: Initialising packet\n");
     free_linux_socket(conn);
@@ -77,25 +77,32 @@ int main() {
   print_packet(sub_pkt);
   conn->send_method(conn, sub_pkt);
 
-  pkt->len = conn->receive_method(conn, pkt); 
-  disect_raw_packet(pkt);
-  if (pkt->fixed->generic.type != SUBACK && pkt->payload->data != 0x00) {
-    printf("Error, incorrect SUBACK return\n");
-    return -1;
+  ret = conn->receive_method(conn, pkt); 
+  if (ret) {
+    printf("Error: SUBACK failed\n");
+    goto free;
   }
-    
+
   printf("\n\nReceived Packet\n---------------\n");
   print_packet(pkt);
 
   /* PUBLISH message */
   printf("\n\nSending Packet\n--------------\n");
   print_packet(pub_pkt);
-  conn->send_method(conn, pub_pkt);
+  ret = conn->send_method(conn, pub_pkt);
+  if (ret) {
+    printf("Error: Sending PUBLISH message failed\n");
+    goto free;
+  }
 
   /* Wait for first message - should be the PUBLISH */
-  pkt->len = conn->receive_method(conn, pkt); 
+  ret = conn->receive_method(conn, pkt); 
+  if (ret) {
+    printf("Error: Receiving PUBLISH failed\n");
+    goto free;
+  }
+
   printf("\n\nReceived Packet\n---------------\n");
-  disect_raw_packet(pkt);
   print_packet(pkt);
 
   /* not fool proof */
@@ -107,13 +114,13 @@ int main() {
     ret = -1;
   }
 
-  broker_disconnect(conn);
-
-  free_connection(conn);
+free:
   free_packet(pkt);
   free_packet(sub_pkt);
   free_packet(pub_pkt);
 
+  broker_disconnect(conn);
+  free_connection(conn);
   return ret;
 }
 

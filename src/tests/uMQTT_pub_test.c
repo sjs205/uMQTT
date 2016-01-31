@@ -39,19 +39,20 @@
 int main() {
   struct broker_conn *conn;
 
+  int ret = 0;
+
   init_linux_socket_connection(&conn, MQTT_BROKER_IP,
       sizeof(MQTT_BROKER_IP), 1883);
   if (!conn) {
-    printf("Error: Initialising socket connection\n");
-    free_linux_socket(conn);
+    printf("Error: Initialising connection\n");
     return -1;
   }
 
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
-  if (broker_connect(conn)) {
-    printf("Error: Initialising socket connection\n");
-    free_linux_socket(conn);
+  ret = broker_connect(conn);
+  if (ret) {
+    printf("Error: Initialising broker connection\n");
     return -1;
   } else {
     printf("Connected to broker:\nip: %s port: %d\n", skt->ip, skt->port);
@@ -62,16 +63,24 @@ int main() {
   struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH,
       (uint8_t *)"uMQTT test PUBLISH packet",
       sizeof("uMQTT test PUBLISH packet"));
+  if (!pub_pkt) {
+    printf("Error: Initialising PUBLISH packet\n");
+    goto free;
+  }
 
   print_packet(pub_pkt);
-  conn->send_method(conn, pub_pkt);
+  ret = conn->send_method(conn, pub_pkt);
+  if (ret) {
+    printf("Error: Sending PUBLISH message failed\n");
+    goto free;
+  }
 
+free:
   free_packet(pub_pkt);
 
   broker_disconnect(conn);
-
   free_connection(conn);
 
-  return 0;
+  return ret;
 }
 
