@@ -30,6 +30,7 @@
 #include "uMQTT_client.h"
 #include "uMQTT_linux_client.h"
 #include "uMQTT_helper.h"
+#include "../inc/log.h"
 
 /* ip of test.mosquitto.org - need to perform dns lookup
    using gethostbyname */
@@ -37,13 +38,15 @@
 #define MQTT_BROKER_PORT      1883
 
 int main() {
+  log_level(LOG_DEBUG);
+
   int ret;
   struct broker_conn *conn;
 
   init_linux_socket_connection(&conn, MQTT_BROKER_IP,
       sizeof(MQTT_BROKER_IP), 1883);
   if (!conn) {
-    printf("Error: Initialising socket connection\n");
+    log_stderr(LOG_ERROR, "Initialising socket connection");
     free_linux_socket(conn);
     return -1;
   }
@@ -51,11 +54,11 @@ int main() {
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   if (broker_connect(conn)) {
-    printf("Error: Initialising socket connection\n");
+    log_stderr(LOG_ERROR, "Initialising socket connection");
     free_linux_socket(conn);
     return -1;
   } else {
-    printf("Connected to broker:\nip: %s port: %d\n", skt->ip, skt->port);
+    log_stdout(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
   }
 
 
@@ -65,7 +68,7 @@ int main() {
   struct mqtt_packet *pkt = NULL;
 
   if (init_packet(&pkt)) {
-    printf("Error: Initialising packet\n");
+    log_stderr(LOG_ERROR, "Initialising packet");
     free_linux_socket(conn);
     free_packet(sub_pkt);
     return -1;
@@ -73,44 +76,44 @@ int main() {
 
   /* Send SUBSCRIBE and wait for SUBACK - although, note that this could be
      a PUBLISH msg. */
-  printf("\n\nSending Packet\n--------------\n");
+  log_stdout(LOG_INFO, "\nSending Packet\n--------------");
   print_packet(sub_pkt);
   conn->send_method(conn, sub_pkt);
 
   ret = conn->receive_method(conn, pkt); 
   if (ret) {
-    printf("Error: SUBACK failed\n");
+    log_stderr(LOG_ERROR, "SUBACK failed");
     goto free;
   }
 
-  printf("\n\nReceived Packet\n---------------\n");
+  log_stdout(LOG_INFO, "\nReceived Packet\n---------------");
   print_packet(pkt);
 
   /* PUBLISH message */
-  printf("\n\nSending Packet\n--------------\n");
+  log_stdout(LOG_INFO, "\nSending Packet\n--------------");
   print_packet(pub_pkt);
   ret = conn->send_method(conn, pub_pkt);
   if (ret) {
-    printf("Error: Sending PUBLISH message failed\n");
+    log_stderr(LOG_ERROR, "Sending PUBLISH message failed");
     goto free;
   }
 
   /* Wait for first message - should be the PUBLISH */
   ret = conn->receive_method(conn, pkt); 
   if (ret) {
-    printf("Error: Receiving PUBLISH failed\n");
+    log_stderr(LOG_ERROR, "Receiving PUBLISH failed");
     goto free;
   }
 
-  printf("\n\nReceived Packet\n---------------\n");
+  log_stdout(LOG_INFO, "\nReceived Packet\n---------------");
   print_packet(pkt);
 
   /* not fool proof */
   if (pkt->fixed->generic.type == PUBLISH) {
-    printf("\n*** Tests Passed ***\n");
+    log_stdout(LOG_INFO, "\n*** Tests Passed ***");
     ret = 0;
   } else {
-    printf("\n*** Tests Failed ***\n");
+    log_stdout(LOG_INFO, "\n*** Tests Failed ***");
     ret = -1;
   }
 

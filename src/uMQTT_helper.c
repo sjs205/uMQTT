@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "uMQTT_helper.h"
-
+#include "../inc/log.h"
 
 /**
  * \brief Function to return the name of a give type.
@@ -109,11 +109,14 @@ char *get_type_string(ctrl_pkt_type type) {
 void print_memory_bytes_hex(void *ptr, size_t len) {
   size_t i;
 
-  printf("%zu bytes starting at address 0x%p\n", len, &ptr);
+  char buf[5 * len];
+  buf[0] = '\0';
+
+  log_stderr(LOG_DEBUG, "%zu bytes starting at address 0x%p", len, &ptr);
   for (i = 0; i < len; i++) {
-    printf("0x%02X ", ((uint8_t *)ptr)[i]);
+    sprintf(buf, "%s0x%02X ", buf, ((uint8_t *)ptr)[i]);
   }
-  printf("\n");
+  log_stderr(LOG_DEBUG, "%s", buf);
 
   return;
 }
@@ -124,30 +127,30 @@ void print_memory_bytes_hex(void *ptr, size_t len) {
  */
 void print_packet(struct mqtt_packet *pkt) {
 
-  printf("\n%s Packet Type:\n", get_type_string(pkt->fixed->generic.type));
+  log_stderr(LOG_DEBUG, "%s Packet Type:", get_type_string(pkt->fixed->generic.type));
 
-  printf("\nFixed header:\n");
-  printf("Length: %zu\n", pkt->fix_len);
+  log_stderr(LOG_DEBUG, "Fixed header:");
+  log_stderr(LOG_DEBUG, "Length: %zu", pkt->fix_len);
   print_memory_bytes_hex((void *)pkt->fixed, pkt->fix_len);
 
   if (pkt->var_len) {
-    printf("\nVariable header:\n");
-    printf("Length: %zu\n", pkt->var_len);
+    log_stderr(LOG_DEBUG, "Variable header:");
+    log_stderr(LOG_DEBUG, "Length: %zu", pkt->var_len);
     print_memory_bytes_hex((void *)pkt->variable, pkt->var_len);
   } else {
-    printf("\nNo Variable header.\n");
+    log_stderr(LOG_DEBUG, "No Variable header.");
   }
 
   if (pkt->pay_len) {
-    printf("\nPayload:\n");
-    printf("Length: %zu\n", pkt->pay_len);
+    log_stderr(LOG_DEBUG, "Payload:");
+    log_stderr(LOG_DEBUG, "Length: %zu", pkt->pay_len);
     print_memory_bytes_hex((void *)&pkt->payload->data,
         pkt->pay_len);
   } else {
-    printf("\nNo Payload.\n");
+    log_stderr(LOG_DEBUG, "No Payload.");
   }
 
-  printf("\nRaw packet:\n");
+  log_stderr(LOG_DEBUG, "Raw packet:");
   print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
 }
 
@@ -160,16 +163,16 @@ void print_publish_packet(struct mqtt_packet *pkt) {
   if (pkt->fixed->generic.type == PUBLISH) {
     char buf[1024];
 
-    printf("\nPUBLISH MSG\n");
+    log_stdout(LOG_INFO, "\nPUBLISH MSG");
 
     uint16_t len = (uint16_t)(pkt->variable->publish.topic.len_lsb | (8 << pkt->variable->publish.topic.len_msb));
     strncpy(buf, &pkt->variable->publish.topic.utf8_str, len);
     buf[len] = '\0';
-    printf("TOPIC: %s\n", buf);
+    log_stdout(LOG_INFO, "TOPIC: %s", buf);
 
     strncpy(buf, (char *)&pkt->payload->data, pkt->pay_len);
     buf[pkt->pay_len] = '\0';
-    printf("PAYLOAD:\n%s\n", buf);
+    log_stdout(LOG_INFO, "PAYLOAD:\n%s", buf);
   }
 
   return;

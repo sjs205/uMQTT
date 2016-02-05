@@ -27,6 +27,7 @@
 #include "uMQTT.h"
 #include "uMQTT_client.h"
 #include "uMQTT_helper.h"
+#include "../inc/log.h"
 
 /**
  * \brief Function to test the encoding and decoding of the remaining packet
@@ -42,33 +43,33 @@ int test_enc_dec_remaining_pkt_len() {
 
   struct mqtt_packet *pkt = '\0';
 
-  printf("Testing remaining packet length encoding/decoding and length estimation:\n");
+  log_stdout(LOG_INFO, "Testing remaining packet length encoding/decoding and length estimation:");
 
   init_packet(&pkt);
   init_packet_fixed_header(pkt, CONNECT);
 
   for (i = 0; i < 8; i++) {
     encode_remaining_len(pkt, lengths[i]);
-    printf("Length: %d\t\tEncoded: %02X %02X %02X %02X\t",
+    log_stdout(LOG_INFO, "Length: %d\t\tEncoded: %02X %02X %02X %02X\t",
         lengths[i], pkt->fixed->remain_len[0],
         pkt->fixed->remain_len[1],
         pkt->fixed->remain_len[2],
         pkt->fixed->remain_len[3]);
 
     int len_dec = decode_remaining_len(pkt);
-    printf("Decoded:%d\t\t", len_dec);
+    log_stdout(LOG_INFO, "Decoded:%d\t\t", len_dec);
     if (len_dec != lengths[i]) {
-      printf("\tDecode FAILED\t");
+      log_stdout(LOG_INFO, "\tDecode FAILED\t");
       ret = 1;
     }
 
     int bytes = required_remaining_len_bytes(lengths[i]);
     for (j = 1; j <= 4 && (pkt->fixed->remain_len[j-1] & 0x80); j++);
-    printf("Estimated %d bytes %d ", bytes, j);
+    log_stdout(LOG_INFO, "Estimated %d bytes %d ", bytes, j);
     if (bytes == j) {
-      printf("Successfully\n");
+      log_stdout(LOG_INFO, "Successfully");
     } else {
-      printf("Unsuccessfully\n");
+      log_stdout(LOG_INFO, "Unsuccessfully");
     }
 
 
@@ -77,9 +78,9 @@ int test_enc_dec_remaining_pkt_len() {
   free_packet(pkt);
 
   if (ret) {
-    printf("Remaining length encoding/decoding failed.\n\n");
+    log_stdout(LOG_INFO, "Remaining length encoding/decoding failed");
   } else {
-    printf("Remaining length encoding/decoding successful.\n\n");
+    log_stdout(LOG_INFO, "Remaining length encoding/decoding successful");
   }
 
   return ret;
@@ -96,39 +97,39 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
   int delta = pkt1->len - pkt2->len;
 
   if (pkt1->fixed->generic.type != pkt1->fixed->generic.type) {
-    printf("Error: Cannot compare packets of different type\n");
+    log_stderr(LOG_ERROR, "Cannot compare packets of different type");
     return delta;
   }
 
-  printf("Comparing %s type packets:\n",get_type_string(pkt1->fixed->generic.type));
+  log_stdout(LOG_INFO, "Comparing %s type packets:",get_type_string(pkt1->fixed->generic.type));
 
   if (delta) {
     delta = (delta < 0) ? delta * -1 : delta;
 
-    printf("Packet sizes differ by %d\n", delta);
-    printf("pkt1 len: %zu pkt2 len: %zu\n", pkt1->len, pkt2->len);
+    log_stdout(LOG_INFO, "Packet sizes differ by %d", delta);
+    log_stdout(LOG_INFO, "pkt1 len: %zu pkt2 len: %zu", pkt1->len, pkt2->len);
 
-    printf("\nPacket 1:\n");
+    log_stdout(LOG_INFO, "\nPacket 1:");
     print_packet(pkt1);
-    printf("\nPacket 2:\n");
+    log_stdout(LOG_INFO, "\nPacket 2:");
     print_packet(pkt2);
     return delta;
   }
 
   for (i = 0; i <= pkt1->len; i++) {
     if (pkt1->raw.buf[i] != pkt2->raw.buf[i]) {
-      printf("Byte %d differs: pkt1: %02X pkt2: %02X\n", i, pkt1->raw.buf[i],
+      log_stdout(LOG_INFO, "Byte %d differs: pkt1: %02X pkt2: %02X", i, pkt1->raw.buf[i],
           pkt2->raw.buf[i]);
       delta++;
     }
   }
 
   if (!delta) {
-    printf("Packets match exactly\n");
+    log_stdout(LOG_INFO, "Packets match exactly");
   } else {
-    printf("\nPacket 1:\n");
+    log_stdout(LOG_INFO, "\nPacket 1:");
     print_packet(pkt1);
-    printf("\nPacket 2:\n");
+    log_stdout(LOG_INFO, "\nPacket 2:");
     print_packet(pkt2);
   }
 
@@ -144,7 +145,7 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
 
   struct mqtt_packet *pkt;
   if (init_packet(&pkt)) {
-    printf("ERROR: Packet creation failed\n");
+    log_stdout(LOG_INFO, "ERROR: Packet creation failed");
     return 0;
   }
 
@@ -203,7 +204,7 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
       break;
 
     default:
-      printf("ERROR: Packet type not recognised\n");
+      log_stdout(LOG_INFO, "ERROR: Packet type not recognised");
       return 0;
       break;
   }
@@ -217,7 +218,7 @@ int test_packet_creation() {
 
   struct mqtt_packet *ctrl_pkt, *gen_pkt;
 
-  printf("Testing packet creation:\n");
+  log_stdout(LOG_INFO, "Testing packet creation:");
 
   /* CONNECT packet */
   type = CONNECT;
@@ -226,7 +227,7 @@ int test_packet_creation() {
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
-    printf("Creation of control packet type %d failed.\n", (int)type);
+    log_stdout(LOG_INFO, "Creation of control packet type %d failed.", (int)type);
   }
   free_packet(ctrl_pkt);
   free_packet(gen_pkt);
@@ -240,7 +241,7 @@ int test_packet_creation() {
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
-    printf("Creation of control packet type %d failed.\n", (int)type);
+    log_stdout(LOG_INFO, "Creation of control packet type %d failed.", (int)type);
   }
   free_packet(ctrl_pkt);
   free_packet(gen_pkt);
@@ -252,7 +253,7 @@ int test_packet_creation() {
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
-    printf("Creation of control packet type %d failed.\n", (int)type);
+    log_stdout(LOG_INFO, "Creation of control packet type %d failed.", (int)type);
   }
   free_packet(ctrl_pkt);
   free_packet(gen_pkt);
@@ -264,7 +265,7 @@ int test_packet_creation() {
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
-    printf("Creation of control packet type %d failed.\n", (int)type);
+    log_stdout(LOG_INFO, "Creation of control packet type %d failed.", (int)type);
   }
   free_packet(ctrl_pkt);
   free_packet(gen_pkt);
@@ -276,7 +277,7 @@ int test_packet_creation() {
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
-    printf("Creation of control packet type %d failed.\n", (int)type);
+    log_stdout(LOG_INFO, "Creation of control packet type %d failed.", (int)type);
   }
   free_packet(ctrl_pkt);
   free_packet(gen_pkt);
@@ -288,19 +289,20 @@ int test_packet_creation() {
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
-    printf("Creation of control packet type %d failed.\n", (int)type);
+    log_stdout(LOG_INFO, "Creation of control packet type %d failed.", (int)type);
   }
   free_packet(ctrl_pkt);
   free_packet(gen_pkt);
 
   if (!fails) {
-    printf("Control packet creation successful for all packet types.\n\n");
+    log_stdout(LOG_INFO, "Control packet creation successful for all packet types");
   }
 
   return fails;
 }
 
 int main() {
+  log_level(LOG_DEBUG);
 
   int ret = 0;
 

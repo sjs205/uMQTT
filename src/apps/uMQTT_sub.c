@@ -32,13 +32,14 @@
 #include "uMQTT.h"
 #include "uMQTT_helper.h"
 #include "uMQTT_linux_client.h"
+#include "../inc/log.h"
 
 /* ip of test.mosquitto.org */
 #define MQTT_BROKER_IP        "85.119.83.194\0"
 #define MQTT_BROKER_PORT      1883
 
-#define MAX_TOPIC_LEN 1024
-#define MAX_MSG_LEN 1024
+#define MAX_TOPIC_LEN         1024
+#define MAX_MSG_LEN           1024
 
 /*
  * \brief function to print help
@@ -49,10 +50,9 @@ static int print_usage() {
       "uMQTT_sub is an application that connects to an MQTT broker and sends a user defined\n"
       "sublish pocket before disconnecting\n"
       "\n"
-      "Usage: uMQTT_sub [options]\n\n"
+      "Usage: uMQTT_sub [options]\n"
       "General options:\n"
       " -h [--help]              : Displays this help and exits\n"
-      " -v [--verbose]           : Verbose logging\n"
       "\n"
       "Publish options:\n"
       " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
@@ -61,6 +61,16 @@ static int print_usage() {
       " -b [--broker] <broker-IP>: Change the default broker IP - only IP addresses are\n"
       "                            currently supported. Default: test.mosquitto.org\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
+      "\n"
+      "Debug options:\n"
+      " -v [--verbose] <LEVEL>   : set verbose level to LEVEL\n"
+      "                               Levels are:\n"
+      "                                 SILENT\n"
+      "                                 ERROR\n"
+      "                                 WARN\n"
+      "                                 INFO (default)\n"
+      "                                 DEBUG\n"
+      "                                 DEBUG_THREAD\n"
       "\n");
 
   return 0;
@@ -73,13 +83,12 @@ int main(int argc, char **argv) {
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char broker_ip[16] = MQTT_BROKER_IP;
   int broker_port = MQTT_BROKER_PORT;
-  int verbose = 0;
 
   static struct option long_options[] =
   {
     /* These options set a flag. */
     {"help",   no_argument,             0, 'h'},
-    {"verbose", no_argument,            0, 'v'},
+    {"verbose", required_argument,            0, 'v'},
     {"topic", required_argument,        0, 't'},
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
@@ -97,8 +106,10 @@ int main(int argc, char **argv) {
           break;
 
         case 'v':
-          /* set verbose */
-          verbose = 1;
+          /* set log level */
+          if (optarg) {
+            set_log_level_str(optarg);
+          }
           break;
 
         case 't':
@@ -106,7 +117,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(topic, optarg);
           } else {
-            printf("Error: The topic flag should be followed by a topic.\n");
+            log_stderr(LOG_ERROR, "The topic flag should be followed by a topic.");
             return print_usage();
           }
           break;
@@ -116,7 +127,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(broker_ip, optarg);
           } else {
-            printf("Error: The broker flag should be followed by an IP address.\n");
+            log_stderr(LOG_ERROR, "The broker flag should be followed by an IP address.");
             return print_usage();
           }
           break;
@@ -126,7 +137,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             broker_port = *optarg;
           } else {
-            printf("Error: The port flag should be followed by a port.\n");
+            log_stderr(LOG_ERROR, "The port flag should be followed by a port.");
             return print_usage();
           }
           break;
@@ -138,41 +149,34 @@ int main(int argc, char **argv) {
 
   struct broker_conn *conn;
 
-  if (verbose) {
-    printf("Initialising socket connection\n");
-  }
+  log_stdout(LOG_INFO, "Initialising socket connection");
+
   init_linux_socket_connection(&conn, broker_ip, sizeof(broker_ip), broker_port);
   if (!conn) {
-    printf("Error: Initialising socket connection\n");
+    log_stderr(LOG_ERROR, "Initialising socket connection");
     return -1;
   }
 
-  if (verbose) {
-    printf("Connecting to broker\n");
-  }
+  log_stdout(LOG_INFO, "Connecting to broker");
 
   struct linux_broker_socket *skt = '\0';
   if ((ret = broker_connect(conn))) {
-    printf("Error: Initialising socket connection\n");
+    log_stderr(LOG_ERROR, "Initialising socket connection");
     free_connection(conn);
     return ret;
   } else {
     skt = (struct linux_broker_socket *)conn->context;
-    if (verbose) {
-      printf("Connected to broker:\nip: %s port: %d\n", skt->ip, skt->port);
-    }
+    log_stdout(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
   }
 
-  if (verbose) {
-    printf("Subscribing to the following topics:\n");
-    printf("Topic: %s\n", topic);
-  }
+  log_stdout(LOG_INFO, "Subscribing to the following topics:");
+  log_stdout(LOG_INFO, "Topic: %s", topic);
 
   /* Find actual length of topic and subscribe */
   const char *end = strchr(topic, '\0');
   if (!end || (ret = broker_subscribe(conn, topic, end - topic))) {
 
-    printf("Error: Subscribing to topic.\n");
+    log_stderr(LOG_ERROR, "Subscribing to topic.");
     ret = UMQTT_ERROR;
     goto free;
   }
@@ -180,7 +184,7 @@ int main(int argc, char **argv) {
   /* Start listening for packets */
   struct mqtt_packet *pkt = NULL;
   if (init_packet(&pkt)) {
-    printf("Error: Initialising packet\n");
+    log_stderr(LOG_ERROR, "Initialising packet");
     ret = UMQTT_ERROR;
     goto free;
   }
@@ -188,9 +192,7 @@ int main(int argc, char **argv) {
   while (1) {
     ret = conn->receive_method(conn, pkt); 
 
-    if (verbose) {
-      print_packet(pkt);
-    }
+    print_packet(pkt);
   }
 
 free:

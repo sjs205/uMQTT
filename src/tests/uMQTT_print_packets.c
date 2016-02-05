@@ -28,43 +28,44 @@
 
 #include "uMQTT.h"
 #include "uMQTT_helper.h"
+#include "../inc/log.h"
 
 void print_struct_sizes() {
 
-  printf("\n\nThe following shows the compile-time sizes of a number of variables used:\n\n");
+  log_stdout(LOG_INFO, "\n\nThe following shows the compile-time sizes of a number of variables used:\n");
 
-  printf("UMQTT_MAX_PACKET_LEN \t\t\t\t\t\t%d\n\n", UMQTT_MAX_PACKET_LEN);
+  log_stdout(LOG_INFO, "UMQTT_MAX_PACKET_LEN \t\t\t\t\t\t%d\n", UMQTT_MAX_PACKET_LEN);
 
-  printf("sizeof(struct mqtt_packet): \t\t\t\t\t%zu bytes\n",
+  log_stdout(LOG_INFO, "sizeof(struct mqtt_packet): \t\t\t\t\t%zu bytes",
       sizeof(struct mqtt_packet));
-  printf("{\n");
-  printf("\tsizeof(struct pkt_fixed_header): \t\t\t%zu bytes\n",
+  log_stdout(LOG_INFO, "{");
+  log_stdout(LOG_INFO, "\tsizeof(struct pkt_fixed_header): \t\t\t%zu bytes",
       sizeof(struct pkt_fixed_header));
-  printf("\t{\n");
-  printf("\t\tsizeof(struct pkt_generic_fixed_header): \t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t{");
+  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_generic_fixed_header): \t%zu bytes",
       sizeof(struct pkt_generic_fixed_header));
-  printf("\t\tsizeof(struct pkt_publish_fixed_header): \t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_publish_fixed_header): \t%zu bytes",
       sizeof(struct pkt_publish_fixed_header));
-  printf("\t}\n");
-  printf("\tsizeof(struct pkt_variable_header): \t\t\t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t}");
+  log_stdout(LOG_INFO, "\tsizeof(struct pkt_variable_header): \t\t\t%zu bytes",
       sizeof(struct pkt_variable_header));
-  printf("\t{\n");
-  printf("\t\tsizeof(struct generic_variable_header): \t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t{");
+  log_stdout(LOG_INFO, "\t\tsizeof(struct generic_variable_header): \t%zu bytes",
       sizeof(struct generic_variable_header));
-  printf("\t\tsizeof(struct connect_variable_header): \t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t\tsizeof(struct connect_variable_header): \t%zu bytes",
       sizeof(struct connect_variable_header));
-  printf("\t\tsizeof(struct connack_variable_header): \t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t\tsizeof(struct connack_variable_header): \t%zu bytes",
       sizeof(struct connack_variable_header));
-  printf("\t\tsizeof(struct publish_variable_header): \t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t\tsizeof(struct publish_variable_header): \t%zu bytes",
       sizeof(struct publish_variable_header));
-  printf("\t}\n");
-  printf("\tsizeof(struct pkt_payload): \t\t\t\t%zu bytes\n",
+  log_stdout(LOG_INFO, "\t}");
+  log_stdout(LOG_INFO, "\tsizeof(struct pkt_payload): \t\t\t\t%zu bytes",
       sizeof(struct pkt_payload));
-  printf("\n\tsizeof(struct raw_pkt): \t\t\t\t%zu bytes\n",
+  log_stdout(LOG_INFO, "\n\tsizeof(struct raw_pkt): \t\t\t\t%zu bytes",
       sizeof(struct raw_pkt));
 
-  printf("}\n");
-  printf("\n\nsizeof(struct utf8_enc_str): \t\t\t\t\t%zu bytes\n",
+  log_stdout(LOG_INFO, "}");
+  log_stdout(LOG_INFO, "\n\nsizeof(struct utf8_enc_str): \t\t\t\t\t%zu bytes",
       sizeof(struct utf8_enc_str));
 
   return;
@@ -72,6 +73,7 @@ void print_struct_sizes() {
 
 
 int main() {
+  log_level(LOG_DEBUG);
 
   struct mqtt_packet *pkt;
 

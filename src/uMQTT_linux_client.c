@@ -33,6 +33,8 @@
 #include <arpa/inet.h>
 
 #include "uMQTT_linux_client.h"
+#include "uMQTT_helper.h"
+#include "inc/log.h"
 
 /**
  * \brief Function to initialise socket based broker connection struct.
@@ -43,13 +45,15 @@
  */
 void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,
     unsigned int port) {
+  log_stderr(LOG_DEBUG, "fn: init_linux_socket_connection");
+
   struct broker_conn *conn;
 
   init_connection(&conn);
   struct linux_broker_socket *skt = '\0';
 
   if (conn && (!(skt = calloc(1, sizeof(struct linux_broker_socket))))) {
-      printf("Error: Allocating space for the broker connection failed.\n");
+      log_stderr(LOG_ERROR, "Allocating space for the broker connection failed");
       free_linux_socket(conn);
       return;
   }
@@ -75,11 +79,13 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
  * \return mqtt_ret
  */
 umqtt_ret linux_socket_connect(struct broker_conn *conn) {
+  log_stderr(LOG_DEBUG, "fn: linux_socket_connect");
+
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   if ((skt->sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
-    printf("Error: Could not create socket\n");
+    log_stderr(LOG_ERROR, "Could not create socket");
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -87,14 +93,14 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
   if (inet_pton(skt->serv_addr.sin_family, skt->ip,
         &skt->serv_addr.sin_addr) <= 0)
   {
-    printf("ERROR: inet_pton error occured\n");
+    log_stderr(LOG_ERROR, "inet_pton error occured");
     return UMQTT_CONNECT_ERROR;
   }
 
   if (connect(skt->sockfd, (struct sockaddr *)&skt->serv_addr,
         sizeof(skt->serv_addr)) < 0)
   {
-    printf("Error: Connect Failed\n");
+    log_stderr(LOG_ERROR, "Connect Failed");
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -107,6 +113,7 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
  * \return mqtt_ret
  */
 umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
+  log_stderr(LOG_DEBUG, "fn: linux_socket_disconnect");
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   if (skt->sockfd) {
@@ -124,11 +131,15 @@ umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
  * \param pkt Pointer to the packet to be sent.
  */
 umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
+  log_stderr(LOG_DEBUG, "fn: send_socket_packet");
+
+  log_stderr(LOG_DEBUG, "TX: %s", get_type_string(pkt->fixed->generic.type));
+
   umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
   int n = write(skt->sockfd, &pkt->raw.buf, *pkt->raw.len);
   if (n < 0) {
-    printf("ERROR: writing to socket\n");
+    log_stderr(LOG_ERROR, "writing to socket");
     ret = UMQTT_SEND_ERROR;
   }
 
@@ -142,15 +153,20 @@ umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \return Number of bytes read.
  */
 umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
+  log_stderr(LOG_DEBUG, "fn: read_socket_packet");
+
   umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   pkt->len = read(skt->sockfd, &pkt->raw.buf, sizeof(pkt->raw.buf) - 1);
   if (pkt->raw.len < 0) {
-    printf("ERROR: reading from socket\n");
+    log_stderr(LOG_ERROR, "reading from socket");
     ret = UMQTT_SEND_ERROR;
   } else {
     disect_raw_packet(pkt);
+
+    log_stderr(LOG_DEBUG, "RX: %s", get_type_string(pkt->fixed->generic.type));
+
     /* can we process the message? */
     if (conn->process_method) {
       ret = conn->process_method(conn, pkt);
@@ -164,6 +180,7 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \param conn The connection to free.
  */
 void free_linux_socket(struct broker_conn *conn) {
+  log_stderr(LOG_DEBUG, "fn: free_linux_socket");
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
   if (skt) {
     free(skt);

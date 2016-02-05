@@ -1,10 +1,12 @@
 UMQTT_PUB_OBJS = $(OBJDIR)/uMQTT.o $(OBJDIR)/uMQTT_client.o \
                  $(OBJDIR)/uMQTT_linux_client.o \
-                 $(OBJDIR)/uMQTT_helper.o
+                 $(OBJDIR)/uMQTT_helper.o \
+                 $(OBJDIR)/log.o
 
 UMQTT_SUB_OBJS = $(OBJDIR)/uMQTT.o $(OBJDIR)/uMQTT_client.o \
                  $(OBJDIR)/uMQTT_linux_client.o \
-                 $(OBJDIR)/uMQTT_helper.o
+                 $(OBJDIR)/uMQTT_helper.o \
+                 $(OBJDIR)/log.o
 
 apps: uMQTT_pub
 apps: uMQTT_sub
