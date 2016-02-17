@@ -49,12 +49,13 @@ static int print_usage() {
       "uMQTT_pub is an application that connects to an MQTT broker and sends a user defined\n"
       "publish pocket before disconnecting\n"
       ""
-      "Usage: uMQTT_pub [options] <PUBLISH message>\n"
+      "Usage: uMQTT_pub [options] -m <PUBLISH message>\n"
       "General options:\n"
       " -h [--help]              : Displays this help and exits\n"
       "\n"
       "Publish options:\n"
       " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
+      " -m [--message] <message> : Set the message for the publish packet\n"
       " -r [--retain]            : Set the retain flag\n"
       "\n"
       "Broker options:\n"
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
   int c, option_index = 0;
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char broker_ip[16] = MQTT_BROKER_IP;
-  char msg[1024];
+  char msg[1024] = "\0";
   int broker_port = MQTT_BROKER_PORT;
   uint8_t retain = 0;
 
@@ -93,6 +94,7 @@ int main(int argc, char **argv) {
     {"retain",   no_argument,           0, 'r'},
     {"verbose", required_argument,      0, 'v'},
     {"topic", required_argument,        0, 't'},
+    {"message", required_argument,      0, 'm'},
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
     {0, 0, 0, 0}
@@ -101,7 +103,7 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hvrt:b:p:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hvrt:m:b:p:", long_options, &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -129,6 +131,16 @@ int main(int argc, char **argv) {
           }
           break;
 
+        case 'm':
+          /* set the message */
+          if (optarg) {
+            strcpy(msg, optarg);
+          } else {
+            log_stderr(LOG_ERROR, "The port flag should be followed by a port");
+            return print_usage();
+          }
+          break;
+
         case 'b':
           /* change the default broker ip */
           if (optarg) {
@@ -149,18 +161,13 @@ int main(int argc, char **argv) {
           }
           break;
       }
-
     } else {
-      /* Final arguement should be the publish message */
-      if (argv[argc - 1] != NULL) {
-        strcpy(msg, argv[argc - 1]);
-      }
+      /* Final arguement */
       break;
     }
-
   }
 
-  if (argv[argc - 1] == NULL) {
+  if (msg[0] == '\0') {
       log_stderr(LOG_ERROR, "The PUBLISH message is missing");
       return -1;
   }
