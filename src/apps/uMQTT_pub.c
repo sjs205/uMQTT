@@ -55,6 +55,7 @@ static int print_usage() {
       "\n"
       "Publish options:\n"
       " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
+      " -r [--retain]            : Set the retain flag\n"
       "\n"
       "Broker options:\n"
       " -b [--broker] <broker-IP>: Change the default broker IP - only IP addresses are\n"
@@ -83,11 +84,13 @@ int main(int argc, char **argv) {
   char broker_ip[16] = MQTT_BROKER_IP;
   char msg[1024];
   int broker_port = MQTT_BROKER_PORT;
+  uint8_t retain = 0;
 
   static struct option long_options[] =
   {
     /* These options set a flag. */
     {"help",   no_argument,             0, 'h'},
+    {"retain",   no_argument,           0, 'r'},
     {"verbose", required_argument,      0, 'v'},
     {"topic", required_argument,        0, 't'},
     {"broker", required_argument,       0, 'b'},
@@ -98,7 +101,7 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hvt:b:p:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hvrt:b:p:", long_options, &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -109,6 +112,11 @@ int main(int argc, char **argv) {
           if (optarg) {
             set_log_level_str(optarg);
           }
+          break;
+
+        case 'r':
+          /* set retain flag */
+          retain = 1;
           break;
 
         case 't':
@@ -187,6 +195,12 @@ int main(int argc, char **argv) {
 
   if (!pkt || (ret = set_publish_variable_header(pkt, topic, strlen(topic)))) {
     log_stderr(LOG_ERROR, "Setting up packet");
+    ret = UMQTT_ERROR;
+    goto free;
+  }
+
+  if ((ret = set_publish_fixed_flags(pkt, retain, 0, 0))) {
+    log_stderr(LOG_ERROR, "Setting publish flags");
     ret = UMQTT_ERROR;
     goto free;
   }

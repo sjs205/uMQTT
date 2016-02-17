@@ -285,6 +285,8 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type);
 umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len);
+umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
+    uint8_t qos, uint8_t dup);
 umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);

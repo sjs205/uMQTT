@@ -496,15 +496,22 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
  * \param topic_len The length of the topic.
  * \param *payload Pointer to payload data.
  * \param *pay_len The lenth of the attached payload data.
+ * \param flags fixed header flags - (DUP|QoS|RETAIN)
  */
 umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
-    size_t topic_len, uint8_t *payload, size_t pay_len) {
+    uint8_t retain, uint8_t qos, uint8_t dup, size_t topic_len, uint8_t
+    *payload, size_t pay_len, uint8_t flags) {
   log_stderr(LOG_DEBUG, "fn: broker_publish");
 
   struct mqtt_packet *pkt = construct_default_packet(PUBLISH, payload,
       pay_len);
   if (!pkt) {
     log_stderr(LOG_ERROR, "PUBLISH packet failed");
+    return UMQTT_ERROR;
+  }
+
+  if (set_publish_fixed_flags(pkt, retain, qos, dup)) {
+    log_stderr(LOG_ERROR, "Failed to set packet flags");
     return UMQTT_ERROR;
   }
 

@@ -146,6 +146,42 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 }
 
 /**
+ * \brief Function to set the fixed header flags of a publish packet
+ * \param pkt Pointer to the address of the packet.
+ * \param retain The retain flag.
+ * \param qos The quality of service for the message.
+ * \param dup The duplicate flag.
+ */
+umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
+    uint8_t qos, uint8_t dup) {
+  log_stderr(LOG_DEBUG, "fn: set_publish_fixed_flags");
+  if (pkt) {
+    if (retain) {
+      pkt->fixed->publish.retain = 1;
+    } else {
+      pkt->fixed->publish.retain = 0;
+    }
+
+    if (qos && qos <= 3) {
+      pkt->fixed->publish.qos = qos;
+    } else {
+      pkt->fixed->publish.qos = 0;
+    }
+
+    if (dup) {
+      pkt->fixed->publish.dup = 1;
+    } else {
+      pkt->fixed->publish.dup = 1;
+    }
+
+    return UMQTT_SUCCESS;
+  } else {
+    log_stderr(LOG_ERROR, "Invalid packet");
+    return UMQTT_PACKET_ERROR;
+  }
+}
+
+/**
  * \brief Function to set the variable header of a PUBLISH packet.
  * \param pkt Pointer to the address of the packet.
  * \param topic The topic for which the message should be published.

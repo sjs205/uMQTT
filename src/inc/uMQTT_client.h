@@ -150,7 +150,8 @@ umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pk
 umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pkt);
 umqtt_ret broker_connect(struct broker_conn *conn);
 umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
-    size_t topic_len, uint8_t *payload, size_t pay_len);
+    uint8_t retain, uint8_t qos, uint8_t dup, size_t topic_len, uint8_t
+    *payload, size_t pay_len, uint8_t flags);
 umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     size_t topic_len);
 umqtt_ret broker_disconnect(struct broker_conn *conn);
