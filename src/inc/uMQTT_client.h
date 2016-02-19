@@ -26,6 +26,10 @@
 #define BROKER_MAX_SUBS         8
 #define MAX_RESP_PKT_RETRIES    8
 
+#define UMQTT_CLIENTID_MAX_LEN  128
+#define UMQTT_USERNAME_MAX_LEN  128
+#define UMQTT_PASSWORD_MAX_LEN  128
+
 struct broker_conn;
 
 /**
@@ -145,6 +149,8 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc,
     umqtt_ret (*pingreq_method)(struct broker_conn *, struct mqtt_packet *),
     umqtt_ret (*pingresp_method)(struct broker_conn *, struct mqtt_packet *),
     umqtt_ret (*disconnect_method)(struct broker_conn *, struct mqtt_packet *));
+umqtt_ret broker_set_clientid(struct broker_conn *conn, const char *clientid,
+    size_t len);
 umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt);
 umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pkt);
 umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pkt);

@@ -238,46 +238,60 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
   pkt->payload =
     (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
-  switch (type) {
-    case CONNECT:
+  if (pay_len) {
+    pkt->pay_len = pay_len;
+    memcpy(&pkt->payload->data, payload, pay_len);
+  } else {
 
-      pkt->pay_len = encode_utf8_string(
-          (struct utf8_enc_str *)&pkt->payload->data, MQTT_CLIENT_ID,
-          (sizeof(MQTT_CLIENT_ID) - 1));
+    /* defaults */
+    switch (type) {
+      case CONNECT:
+        set_connect_payload(pkt, UMQTT_DEFAULT_CLIENTID,
+            sizeof(UMQTT_DEFAULT_CLIENTID));
+        break;
 
-      break;
-
-    case PUBLISH:
-    case SUBSCRIBE:
-      pkt->pay_len = pay_len;
-
-      if (pay_len) {
-        memcpy(&pkt->payload->data, payload, pay_len);
-      } else {
-        /* defaults */
+      case SUBSCRIBE:
         set_subscribe_payload(pkt, UMQTT_DEFAULT_TOPIC,
             sizeof(UMQTT_DEFAULT_TOPIC), UMQTT_DEFAULT_QOS);
-      }
+        break;
 
-      break;
+      case PUBLISH:
+      case PINGREQ:
+      case PINGRESP:
+      case DISCONNECT:
+        break;
 
+      default:
+        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
 
-    case PINGREQ:
-    case PINGRESP:
-    case DISCONNECT:
-
-      break;
-
-    default:
-      log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
-
-      return UMQTT_ERROR;
+        return UMQTT_ERROR;
+    }
   }
 
   /* recalculate pay->len */
   pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return UMQTT_SUCCESS;
+}
+
+/**
+ * \brief Function to set the clientid of a CONNECT packet.
+ * \param clientid The client ID.
+ * \param len The length of the Client ID.
+ */
+umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
+    size_t len) {
+  log_stderr(LOG_DEBUG, "fn: set_connect_payload");
+
+  /* set clientid */
+  pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
+      clientid, len) + 1;
+
+  /* recalculate pay->len */
+  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
+
+  return UMQTT_SUCCESS;
+
 }
 
 /**

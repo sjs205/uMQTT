@@ -62,6 +62,7 @@ static int print_usage() {
       " -b [--broker] <broker-IP>: Change the default broker IP - only IP addresses are\n"
       "                            currently supported. Default: test.mosquitto.org\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
+      " -c [--clientid] <id>     : Change the default clientid\n"
       "\n"
       "Debug options:\n"
       " -v [--verbose] <LEVEL>   : set verbose level to LEVEL\n"
@@ -85,6 +86,7 @@ int main(int argc, char **argv) {
   char broker_ip[16] = MQTT_BROKER_IP;
   char msg[1024] = "\0";
   int broker_port = MQTT_BROKER_PORT;
+  char clientid[UMQTT_CLIENTID_MAX_LEN] = "\0";
   uint8_t retain = 0;
 
   static struct option long_options[] =
@@ -97,13 +99,14 @@ int main(int argc, char **argv) {
     {"message", required_argument,      0, 'm'},
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
+    {"clientid", required_argument,     0, 'c'},
     {0, 0, 0, 0}
   };
 
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:", long_options, &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -160,6 +163,18 @@ int main(int argc, char **argv) {
             return print_usage();
           }
           break;
+
+        case 'c':
+          /* Set clientid */
+          if (optarg) {
+            strcpy(clientid, optarg);
+          } else {
+            log_stderr(LOG_ERROR,
+                "The clientid flag should be followed by a clientid");
+            return print_usage();
+          }
+          break;
+
       }
     } else {
       /* Final arguement */
@@ -180,6 +195,10 @@ int main(int argc, char **argv) {
   if (!conn) {
     log_stdout(LOG_INFO, "XError: Initialising socket connection");
     return -1;
+  }
+
+  if (clientid[0]) {
+    broker_set_clientid(conn, clientid, sizeof(clientid));
   }
 
   log_stdout(LOG_INFO, "Connecting to broker");

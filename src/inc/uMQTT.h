@@ -29,7 +29,7 @@
 /* default defines - some can be overridden */
 #define MQTT_PROTO_NAME           "MQTT"
 #define MQTT_PROTO_LEVEL          0x04
-#define MQTT_CLIENT_ID            "uMQTT"
+#define UMQTT_DEFAULT_CLIENTID    "uMQTT"
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
 #define UMQTT_DEFAULT_QOS         0
 
@@ -290,6 +290,8 @@ umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
 umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
+umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *cID,
+    size_t cID_len);
 umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos);
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);

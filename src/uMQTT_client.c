@@ -27,7 +27,6 @@
 
 #include "uMQTT.h"
 #include "uMQTT_client.h"
-#include "uMQTT_client.h"
 #include "uMQTT_helper.h"
 #include "inc/log.h"
 
@@ -41,8 +40,22 @@ void init_connection(struct broker_conn **conn_p) {
   struct broker_conn *conn;
 
   if (!(conn = calloc(1, sizeof(struct broker_conn)))) {
-
     log_stderr(LOG_ERROR, "Allocating space for the broker connection failed");
+    free_connection(conn);
+  }
+
+  if (!(conn->client.clientid = calloc(UMQTT_CLIENTID_MAX_LEN, sizeof(char)))) {
+    log_stderr(LOG_ERROR, "Allocating space for the clientid failed");
+    free_connection(conn);
+  }
+
+  if (!(conn->client.username = calloc(UMQTT_USERNAME_MAX_LEN, sizeof(char)))) {
+    log_stderr(LOG_ERROR, "Allocating space for the username failed");
+    free_connection(conn);
+  }
+
+  if (!(conn->client.password = calloc(UMQTT_PASSWORD_MAX_LEN, sizeof(char)))) {
+    log_stderr(LOG_ERROR, "Allocating space for the password failed");
     free_connection(conn);
   }
 
@@ -215,10 +228,29 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
 }
 
 /**
+ * \brief Function to set the clientid.
+ * \param conn Pointer to the broker_conn struct.
+ * \param clientid The clientid.
+ * \param len The len of clientid string.
+ * \return umqtt_ret
+ */
+umqtt_ret broker_set_clientid(struct broker_conn *conn, const char *clientid,
+    size_t len) {
+  log_stderr(LOG_DEBUG, "fn: broker_set_clientid");
+
+  if (!strncpy(conn->client.clientid, clientid, len)) {
+    log_stderr(LOG_ERROR, "Failed to copy clientid");
+    return UMQTT_MEM_ERROR;
+  }
+
+  return UMQTT_SUCCESS;
+}
+
+/**
  * \brief Function to connect to broker socket and send a
  *        CONNECT packet..
  * \param conn Pointer to the broker_conn struct.
- * \return mqtt_ret
+ * \return umqtt_ret
  */
 umqtt_ret broker_connect(struct broker_conn *conn) {
   log_stderr(LOG_DEBUG, "fn: broker_connect");
@@ -230,14 +262,29 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     return UMQTT_CONNECT_ERROR;
   }
 
-  /* send connect packet */
-  struct mqtt_packet *pkt = construct_default_packet(CONNECT, 0, 0);
+  /* build connect packet */
+  struct mqtt_packet *pkt = construct_packet_headers(CONNECT);
+
+  ret = init_packet_payload(pkt, CONNECT, 0, 0);
+  if (ret) {
+    free_packet(pkt);
+    return ret;
+  }
+
+  if (conn->client.clientid[0]) {
+    set_connect_payload(pkt, conn->client.clientid,
+        strlen(conn->client.clientid));
+  }
+
+  finalise_packet(pkt);
+
+  print_packet(pkt);
 
   ret = conn->send_method(conn, pkt);
   free_packet(pkt);
   if (ret) {
     log_stderr(LOG_ERROR, "Connect Packet Failed");
-    return UMQTT_CONNECT_ERROR;
+    return ret;
   }
 
   /* get response */
@@ -640,6 +687,18 @@ void free_connection(struct broker_conn *conn) {
   }
 
   free_process_methods(conn->proc);
+
+  if (conn->client.clientid) {
+    free(conn->client.clientid);
+  }
+
+  if (conn->client.username) {
+    free(conn->client.username);
+  }
+
+  if (conn->client.password) {
+    free(conn->client.password);
+  }
 
   if (conn) {
     free(conn);
