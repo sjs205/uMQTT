@@ -167,7 +167,8 @@ void print_publish_packet(struct mqtt_packet *pkt) {
 
     log_stdout(LOG_INFO, "\nPUBLISH MSG");
 
-    uint16_t len = (uint16_t)(pkt->variable->publish.topic.len_lsb | (8 << pkt->variable->publish.topic.len_msb));
+    uint16_t len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
+        | (pkt->variable->publish.topic.len_lsb));
     strncpy(buf, &pkt->variable->publish.topic.utf8_str, len);
     buf[len] = '\0';
     log_stdout(LOG_INFO, "TOPIC: %s", buf);

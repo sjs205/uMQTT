@@ -434,8 +434,9 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
       break;
 
     case PUBLISH:
-      pkt->var_len = (pkt->variable->publish.topic.len_lsb |
-          (8 << pkt->variable->publish.topic.len_msb));
+      pkt->var_len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
+          | (pkt->variable->publish.topic.len_lsb));
+
       /* utf8 encoded string len */ 
       pkt->var_len += 2;
 
