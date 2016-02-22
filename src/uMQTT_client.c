@@ -367,8 +367,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->connect_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -383,7 +381,7 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
           conn->state = UMQTT_CONNECTED;
         } else {
           conn->state = UMQTT_DISCONNECTED;
-          log_stderr(LOG_ERROR, "Failed to connect the MQTT broker");
+          log_stderr(LOG_ERROR, "MQTT connect failed");
           ret = UMQTT_CONNECT_ERROR;
         }
       }
@@ -403,8 +401,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->puback_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -414,8 +410,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->pubcomp_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -425,8 +419,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->pubrel_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -436,8 +428,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->pubrec_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -447,8 +437,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->subscribe_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -458,8 +446,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->unsubscribe_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -489,8 +475,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->unsuback_method(conn, pkt);
 
       } else {
-        /* not currently supported */
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
         ret = UMQTT_PKT_NOT_SUPPORTED;
       }
       break;
@@ -504,6 +488,9 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         struct mqtt_packet *pkt_resp = construct_default_packet(PINGRESP, 0, 0);
         if (conn->send_method(conn, pkt)) {
           log_stderr(LOG_ERROR, "Failed to send PINGRESP packet");
+          if (log_level(LOG_NONE) == LOG_DEBUG) {
+            print_packet(pkt);
+          }
           ret = UMQTT_PACKET_ERROR;
         }
         free_packet(pkt_resp);
@@ -529,8 +516,15 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
       break;
 
     default:
-      log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
       ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+
+  if (ret == UMQTT_PKT_NOT_SUPPORTED) {
+    log_stderr(LOG_ERROR, "MQTT packet not currently supported: %s",
+        get_type_string(pkt->fixed->generic.type));
+    if (log_level(LOG_NONE) == LOG_DEBUG) {
+      print_packet(pkt);
+    }
   }
 
   return ret;
