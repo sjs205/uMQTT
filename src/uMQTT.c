@@ -135,7 +135,8 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       break;
 
     default:
-      log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
+      log_stderr(LOG_ERROR, "Init variable: MQTT packet type not supported: %s",
+          type);
 
       return UMQTT_ERROR;
   }
@@ -262,7 +263,8 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
         break;
 
       default:
-        log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
+        log_stderr(LOG_ERROR, "Init packet: MQTT packet type not supported: %s",
+            type);
 
         return UMQTT_ERROR;
     }
@@ -462,7 +464,8 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
       break;
 
     default:
-      log_stderr(LOG_ERROR, "MQTT packet type not currently supported");
+      log_stderr(LOG_ERROR, "Disect packet: MQTT packet type not supported: %s",
+          pkt->fixed->generic.type);
   }
   /* assign payload */
   pkt->pay_len = pkt->len - (pkt->fix_len + pkt->var_len);
