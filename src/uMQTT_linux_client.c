@@ -161,7 +161,7 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
   pkt->len = read(skt->sockfd, &pkt->raw.buf, sizeof(pkt->raw.buf) - 1);
   if (pkt->raw.len < 0) {
     log_stderr(LOG_ERROR, "reading from socket");
-    ret = UMQTT_SEND_ERROR;
+    ret = UMQTT_RECEIVE_ERROR;
   } else {
     disect_raw_packet(pkt);
 

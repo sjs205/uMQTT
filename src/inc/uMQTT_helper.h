@@ -42,7 +42,12 @@
 #define PINGRESP_STR        "PINGRESP\0"
 #define DISCONNECT_STR      "DISCONNECT\0"
 
+#define UNIQUE_STR_CHARSET  "abcdefghijklmnopqrstuvwxyz" \
+                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
+                            "0123456789"
+
 char *get_type_string(ctrl_pkt_type type);
+void gen_unique_string(char *str, size_t len);
 void print_memory_bytes_hex(void *ptr, size_t len);
 void print_packet(struct mqtt_packet *pkt);
 void print_publish_packet(struct mqtt_packet *pkt);

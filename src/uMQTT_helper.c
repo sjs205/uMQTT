@@ -23,7 +23,9 @@
  *
  *****************************************************************************/
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "uMQTT_helper.h"
 #include "../inc/log.h"
@@ -176,4 +178,26 @@ void print_publish_packet(struct mqtt_packet *pkt) {
   }
 
   return;
+}
+
+/**
+ * \brief Function to generate a unique string to be used
+ *        as part of the default clientid.
+ * \param str Buffer to store generated string.
+ * \param len Length of the string to generate.
+ */
+void gen_unique_string(char *str, size_t len) {
+
+  const char charset[] = UNIQUE_STR_CHARSET;
+  size_t i;
+
+  srand(time(NULL));
+  if (len) {
+    --len;
+    for (i = 0; i < len; i++) {
+      int key = rand() % (int) (sizeof(charset) - 1);
+      str[i] = charset[key];
+    }
+    str[len] = '\0';
+  }
 }

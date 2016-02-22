@@ -247,6 +247,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     /* defaults */
     switch (type) {
       case CONNECT:
+        /* The clientid set here should always be overloaded */
         set_connect_payload(pkt, UMQTT_DEFAULT_CLIENTID,
             sizeof(UMQTT_DEFAULT_CLIENTID));
         break;
