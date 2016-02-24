@@ -302,7 +302,7 @@ void disect_raw_packet(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
-int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
+uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len);
 uint8_t required_remaining_len_bytes(unsigned int len);
 

@@ -116,7 +116,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
 
       /* defaults */
       set_publish_variable_header(pkt, UMQTT_DEFAULT_TOPIC,
-          (sizeof(UMQTT_DEFAULT_TOPIC) - 1));
+          (sizeof(UMQTT_DEFAULT_TOPIC)));
 
       break;
 
@@ -288,7 +288,7 @@ umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
 
   /* set clientid */
   pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
-      clientid, len) + 1;
+      clientid, len);
 
   /* recalculate pay->len */
   pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
@@ -310,9 +310,9 @@ umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
 
   /* set topic */
   pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
-      topic, topic_len) + 1;
+      topic, topic_len);
   /* set topic QOS */
-  *(&pkt->payload->data + pkt->pay_len - 1) = (0x03 & qos);
+  *(&pkt->payload->data + pkt->pay_len++) = (0x03 & qos);
 
   /* recalculate pay->len */
   pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
@@ -572,7 +572,7 @@ unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
  * \param len The length of str
  * \return len of encoded string
  */
-int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
+uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len) {
   log_stderr(LOG_DEBUG, "fn: encode_utf8_string");
 
@@ -581,13 +581,14 @@ int encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     return 0;
   }
 
+  len = strnlen(buf, len);
   memcpy(&utf8_str->utf8_str, buf, len);
 
-  utf8_str->len_msb = (uint8_t)(len >> 8);
   utf8_str->len_lsb = (uint8_t)len;
+  utf8_str->len_msb = (uint8_t)(len << 8);
 
   /* subtract 1 for the utf8_str placeholder */
-  return (sizeof(struct utf8_enc_str) - 1)  + len;
+  return (uint16_t)((sizeof(struct utf8_enc_str) - 1)  + len);
 }
 
 /**

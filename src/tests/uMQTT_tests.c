@@ -43,7 +43,8 @@ int test_enc_dec_remaining_pkt_len() {
 
   struct mqtt_packet *pkt = '\0';
 
-  log_stdout(LOG_INFO, "Testing remaining packet length encoding/decoding and length estimation:");
+  log_stdout(LOG_INFO,
+      "Testing remaining packet length encoding/decoding and length estimation:");
 
   init_packet(&pkt);
   init_packet_fixed_header(pkt, CONNECT);
@@ -71,8 +72,6 @@ int test_enc_dec_remaining_pkt_len() {
     } else {
       log_stdout(LOG_INFO, "Unsuccessfully");
     }
-
-
   }
 
   free_packet(pkt);
@@ -101,7 +100,8 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
     return delta;
   }
 
-  log_stdout(LOG_INFO, "Comparing %s type packets:",get_type_string(pkt1->fixed->generic.type));
+  log_stdout(LOG_INFO, "Comparing %s type packets:",
+      get_type_string(pkt1->fixed->generic.type));
 
   if (delta) {
     delta = (delta < 0) ? delta * -1 : delta;
@@ -118,8 +118,8 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
 
   for (i = 0; i <= pkt1->len; i++) {
     if (pkt1->raw.buf[i] != pkt2->raw.buf[i]) {
-      log_stdout(LOG_INFO, "Byte %d differs: pkt1: %02X pkt2: %02X", i, pkt1->raw.buf[i],
-          pkt2->raw.buf[i]);
+      log_stdout(LOG_INFO, "Byte %d differs: pkt1: %02X pkt2: %02X",
+          i, pkt1->raw.buf[i], pkt2->raw.buf[i]);
       delta++;
     }
   }
@@ -174,10 +174,9 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
 
     case SUBSCRIBE: ;
       /* default subscribe packet */
-      uint8_t subscribe[17] = {
-        0x82, 0x0F, 0x00, 0x00, 0x00, 0x0A, 0x75, 0x4D,
-        0x51, 0x54, 0x54, 0x5F, 0x50, 0x55, 0x42, 0x00,
-        0x00 };
+      uint8_t subscribe[16] = {
+        0x82, 0x0E, 0x00, 0x00, 0x00, 0x09, 0x75, 0x4D,
+        0x51, 0x54, 0x54, 0x5F, 0x50, 0x55, 0x42, 0x00 };
       memcpy(pkt->raw.buf, subscribe, sizeof(subscribe));
       disect_raw_packet(pkt);
       break;
@@ -295,7 +294,8 @@ int test_packet_creation() {
   free_packet(gen_pkt);
 
   if (!fails) {
-    log_stdout(LOG_INFO, "Control packet creation successful for all packet types");
+    log_stdout(LOG_INFO,
+        "Control packet creation successful for all packet types");
   }
 
   return fails;
