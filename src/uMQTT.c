@@ -240,8 +240,15 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
   if (pay_len) {
+
+    if (pay_len > (UMQTT_MAX_PACKET_LEN - (pkt->fix_len + pkt->var_len))) {
+      log_stderr(LOG_ERROR, "payload larger that memory");
+      return UMQTT_PAYLOAD_ERROR;
+    }
+
     pkt->pay_len = pay_len;
     memcpy(&pkt->payload->data, payload, pay_len);
+
   } else {
 
     /* defaults */

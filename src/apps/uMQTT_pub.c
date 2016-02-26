@@ -24,7 +24,7 @@
  *
  *****************************************************************************/
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <getopt.h>
@@ -56,6 +56,7 @@ static int print_usage() {
       "Publish options:\n"
       " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
       " -m [--message] <message> : Set the message for the publish packet\n"
+      " -f [--file] <filename>   : Use contents of file for the publish message\n"
       " -r [--retain]            : Set the retain flag\n"
       "\n"
       "Broker options:\n"
@@ -78,6 +79,34 @@ static int print_usage() {
   return 0;
 }
 
+/**
+ * \brief Function to read the contents of a file into buffer.
+ * \param filename The file to read.
+ * \param buf The buffer for the file.
+ * \param len The len of the buffer.
+ */
+umqtt_ret file_read_contents(const char *filename, uint8_t *buf, size_t *len) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  FILE *f = fopen(filename, "rb");
+  fseek(f, 0, SEEK_END);
+  size_t fsize = ftell(f);
+  fseek(f, 0, SEEK_SET);
+
+  if (fsize > *len) {
+    log_stderr(LOG_ERROR, "The file (%zu bytes) is larger than buffer (%zu bytes)",
+      fsize, *len);
+    fclose(f);
+    ret = UMQTT_PAYLOAD_ERROR;
+  } else {
+    *len = fread(buf, 1, fsize, f);
+    fclose(f);
+  }
+
+  return ret;
+}
+
 int main(int argc, char **argv) {
 
   int ret;
@@ -85,6 +114,7 @@ int main(int argc, char **argv) {
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char broker_ip[16] = MQTT_BROKER_IP;
   char msg[1024] = "\0";
+  char filename[1024] = "\0";
   int broker_port = MQTT_BROKER_PORT;
   char clientid[UMQTT_CLIENTID_MAX_LEN] = "\0";
   uint8_t retain = 0;
@@ -97,6 +127,7 @@ int main(int argc, char **argv) {
     {"verbose", required_argument,      0, 'v'},
     {"topic", required_argument,        0, 't'},
     {"message", required_argument,      0, 'm'},
+    {"file", required_argument,         0, 'f'},
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
     {"clientid", required_argument,     0, 'c'},
@@ -106,7 +137,7 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:f:", long_options, &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -139,7 +170,17 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(msg, optarg);
           } else {
-            log_stderr(LOG_ERROR, "The port flag should be followed by a port");
+            log_stderr(LOG_ERROR, "The message flag should be followed by a message");
+            return print_usage();
+          }
+          break;
+
+        case 'f':
+          /* set the message to the file */
+          if (optarg) {
+            strcpy(filename, optarg);
+          } else {
+            log_stderr(LOG_ERROR, "The file flag should be followed by a file");
             return print_usage();
           }
           break;
@@ -182,7 +223,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (msg[0] == '\0') {
+  if (msg[0] && filename[0]) {
       log_stderr(LOG_ERROR, "The PUBLISH message is missing");
       return -1;
   }
@@ -231,10 +272,39 @@ int main(int argc, char **argv) {
     goto free;
   }
 
-  if ((ret = init_packet_payload(pkt, PUBLISH, (uint8_t *)msg, strlen(msg)))) {
-    log_stderr(LOG_ERROR, "Attaching payload");
-    ret = UMQTT_ERROR;
-    goto free;
+  if (filename[0]) {
+
+    size_t len = UMQTT_MAX_PACKET_LEN;
+    uint8_t *buf = calloc(sizeof(uint8_t), len);
+    if (!buf) {
+      log_stderr(LOG_ERROR, "File buffer allocation failed");
+      ret = UMQTT_ERROR;
+      goto free;
+    }
+
+    if ((ret = file_read_contents(filename, buf, &len))) {
+      log_stderr(LOG_ERROR, "Reading file failed");
+      ret = UMQTT_ERROR;
+      free (buf);
+      goto free;
+    }
+
+    if ((ret = init_packet_payload(pkt, PUBLISH, buf, len))) {
+      log_stderr(LOG_ERROR, "Attaching payload");
+      ret = UMQTT_ERROR;
+      free (buf);
+      goto free;
+    }
+
+    free (buf);
+
+  } else {
+
+    if ((ret = init_packet_payload(pkt, PUBLISH, (uint8_t *)msg, strlen(msg)))) {
+      log_stderr(LOG_ERROR, "Attaching payload");
+      ret = UMQTT_ERROR;
+      goto free;
+    }
   }
 
   finalise_packet(pkt);
