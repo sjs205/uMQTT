@@ -114,9 +114,12 @@ void print_memory_bytes_hex(void *ptr, size_t len) {
   char buf[5 * len];
   buf[0] = '\0';
 
+  char tbuf[10] = "\0";
+
   log_stderr(LOG_DEBUG, "%zu bytes starting at address 0x%p", len, &ptr);
   for (i = 0; i < len; i++) {
-    sprintf(buf, "%s0x%02X ", buf, ((uint8_t *)ptr)[i]);
+    sprintf(tbuf, "0x%02X ", ((uint8_t *)ptr)[i]);
+    strcat(buf, tbuf);
   }
   log_stderr(LOG_DEBUG, "%s", buf);
 

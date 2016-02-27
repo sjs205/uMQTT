@@ -276,7 +276,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
         strlen(conn->client.clientid));
   } else {
     /* set unique clientid */
-    char buf[UMQTT_MAX_PACKET_LEN] = UMQTT_DEFAULT_TOPIC;
+    char buf[UMQTT_DEFAULT_PKT_LEN] = UMQTT_DEFAULT_TOPIC;
     int len = strlen(buf);
     buf[len++] = '-';
     gen_unique_string(&buf[len], 8);

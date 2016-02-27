@@ -274,7 +274,8 @@ int main(int argc, char **argv) {
 
   if (filename[0]) {
 
-    size_t len = UMQTT_MAX_PACKET_LEN;
+    /* create new buffer - should be dynamic */
+    size_t len = MAX_REMAIN_LEN_PRODUCT;
     uint8_t *buf = calloc(sizeof(uint8_t), len);
     if (!buf) {
       log_stderr(LOG_ERROR, "File buffer allocation failed");

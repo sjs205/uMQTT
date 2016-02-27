@@ -34,7 +34,7 @@ void print_struct_sizes() {
 
   log_stdout(LOG_INFO, "\n\nThe following shows the compile-time sizes of a number of variables used:\n");
 
-  log_stdout(LOG_INFO, "UMQTT_MAX_PACKET_LEN \t\t\t\t\t\t%d\n", UMQTT_MAX_PACKET_LEN);
+  log_stdout(LOG_INFO, "UMQTT_DEFAULT_PKT_LEN \t\t\t\t\t\t%d\n", UMQTT_DEFAULT_PKT_LEN);
 
   log_stdout(LOG_INFO, "sizeof(struct mqtt_packet): \t\t\t\t\t%zu bytes",
       sizeof(struct mqtt_packet));

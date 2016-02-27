@@ -116,7 +116,7 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
     return delta;
   }
 
-  for (i = 0; i <= pkt1->len; i++) {
+  for (i = 0; i < pkt1->len; i++) {
     if (pkt1->raw.buf[i] != pkt2->raw.buf[i]) {
       log_stdout(LOG_INFO, "Byte %d differs: pkt1: %02X pkt2: %02X",
           i, pkt1->raw.buf[i], pkt2->raw.buf[i]);
@@ -223,6 +223,7 @@ int test_packet_creation() {
   type = CONNECT;
   ctrl_pkt = create_manual_control_pkt(type);
   gen_pkt = construct_default_packet(type, 0, 0);
+  finalise_packet(gen_pkt);
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
@@ -237,6 +238,7 @@ int test_packet_creation() {
   gen_pkt = construct_default_packet(type,
       (uint8_t *)"uMQTT test PUBLISH packet",
       sizeof("uMQTT test PUBLISH packet"));
+  finalise_packet(gen_pkt);
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
@@ -249,6 +251,7 @@ int test_packet_creation() {
   type = SUBSCRIBE;
   ctrl_pkt = create_manual_control_pkt(type);
   gen_pkt = construct_default_packet(type, 0, 0);
+  finalise_packet(gen_pkt);
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
@@ -261,6 +264,7 @@ int test_packet_creation() {
   type = PINGREQ;
   ctrl_pkt = create_manual_control_pkt(type);
   gen_pkt = construct_default_packet(type, 0, 0);
+  finalise_packet(gen_pkt);
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
@@ -273,6 +277,7 @@ int test_packet_creation() {
   type = PINGRESP;
   ctrl_pkt = create_manual_control_pkt(type);
   gen_pkt = construct_default_packet(type, 0, 0);
+  finalise_packet(gen_pkt);
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;
@@ -285,6 +290,7 @@ int test_packet_creation() {
   type = DISCONNECT;
   ctrl_pkt = create_manual_control_pkt(type);
   gen_pkt = construct_default_packet(type, 0, 0);
+  finalise_packet(gen_pkt);
   delta = test_compare_packets(ctrl_pkt, gen_pkt);
   if (delta) {
     fails++;

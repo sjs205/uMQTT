@@ -41,12 +41,19 @@ umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
 
   if (!(pkt = calloc(1, sizeof(struct mqtt_packet)))) {
     log_stderr(LOG_ERROR, "Allocating space for MQTT packet failed");
+    return UMQTT_MEM_ERROR;
+  }
+
+  if (!(pkt->raw.buf = calloc(sizeof(uint8_t), UMQTT_DEFAULT_PKT_LEN))) {
+    log_stderr(LOG_ERROR, "Allocating space for raw packet failed");
     free_packet(pkt);
     return UMQTT_MEM_ERROR;
   }
 
-  pkt->raw.len = &pkt->len;
+  pkt->raw.len = UMQTT_DEFAULT_PKT_LEN;
   *pkt_p = pkt;
+
+  log_stderr(LOG_DEBUG, "New packet with %zu bytes allocated", pkt->raw.len);
 
   return UMQTT_SUCCESS;
 }
@@ -68,7 +75,7 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
     1 + MAX_REMAIN_LEN_BYTES;
 
   /* alloate fixed header */
-  pkt->fixed = (struct pkt_fixed_header *)&pkt->raw.buf[0];
+  pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
 
   pkt->fixed->generic.type = type;
 
@@ -172,7 +179,7 @@ umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
     if (dup) {
       pkt->fixed->publish.dup = 1;
     } else {
-      pkt->fixed->publish.dup = 1;
+      pkt->fixed->publish.dup = 0;
     }
 
     return UMQTT_SUCCESS;
@@ -235,19 +242,35 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len) {
   log_stderr(LOG_DEBUG, "fn: init_packet_payload");
 
+  umqtt_ret ret = UMQTT_SUCCESS;
+
   /* allocate payload */
   pkt->payload =
     (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
   if (pay_len) {
+    /* ensure payload is less that mqtt max */
+    if (pay_len <= MAX_REMAIN_LEN_PRODUCT) {
 
-    if (pay_len > (UMQTT_MAX_PACKET_LEN - (pkt->fix_len + pkt->var_len))) {
-      log_stderr(LOG_ERROR, "payload larger that memory");
-      return UMQTT_PAYLOAD_ERROR;
+      /* increase packet size? */
+      if ((pay_len + pkt->fix_len + pkt->var_len) > pkt->raw.len) {
+        size_t new_len = pay_len + pkt->fix_len + pkt->var_len;
+        ret = resize_packet(&pkt, new_len);
+        if (ret) {
+          log_stderr(LOG_ERROR, "Payload resize failed");
+          return UMQTT_PAYLOAD_ERROR;
+        }
+      }
+
+      /* copy payload data */
+      pkt->pay_len = pay_len;
+      memcpy(&pkt->payload->data, payload, pay_len);
+
+    } else {
+        log_stderr(LOG_ERROR,
+            "Payload length causes remaining length overflow");
+        return UMQTT_PAYLOAD_ERROR;
     }
-
-    pkt->pay_len = pay_len;
-    memcpy(&pkt->payload->data, payload, pay_len);
 
   } else {
 
@@ -281,7 +304,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
   /* recalculate pay->len */
   pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
-  return UMQTT_SUCCESS;
+  return ret;
 }
 
 /**
@@ -302,6 +325,39 @@ umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
 
   return UMQTT_SUCCESS;
 
+}
+
+/**
+ * \brief Function to resize mqtt_pkt
+ * \param pkt The mxtt_packet to finalise.
+ * \param len The new packet length.
+ * \return the number of bytes saved
+ */
+umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
+  log_stderr(LOG_DEBUG, "fn: resize_packet");
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  uint8_t *buf = realloc((*pkt_p)->raw.buf, len * sizeof(uint8_t));
+  if (!buf) {
+    log_stderr(LOG_ERROR, "Packet resize failed");
+    ret = UMQTT_MEM_ERROR;
+  } else {
+
+    if ((*pkt_p)->raw.len < len) {
+      memset(&(*pkt_p)->raw.buf[(*pkt_p)->raw.len + 1], 0,
+          len - (*pkt_p)->raw.len);
+    }
+    (*pkt_p)->raw.len = len;
+    (*pkt_p)->raw.buf = buf;
+
+    /* ensure packet is aligned with raw packet */
+    realign_packet(*pkt_p);
+
+    log_stderr(LOG_DEBUG, "Packet resize sucessfull, new length: %zu", len);
+  }
+
+  return ret;
 }
 
 /**
@@ -373,8 +429,6 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     return NULL;
   }
 
-  finalise_packet(pkt);
-
   return pkt;
 }
 
@@ -404,12 +458,35 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
     pkt->len -= delta;
   }
 
-  /* Free unused space */
-
   /* recalculate pay->len */
   pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
+  /* Free unused space */
+  if (pkt->len < UMQTT_DEFAULT_PKT_LEN) {
+    resize_packet(&pkt, pkt->len);
+  }
+
   return delta;
+}
+
+/**
+ * \brief Function to realign struct mqtt_pkt to struct raw_pkt based on the
+ *        pkt->raw.buf address and current packet section lengths.
+ * \param pkt The mxtt_packet to realign.
+ */
+void realign_packet(struct mqtt_packet *pkt) {
+  log_stderr(LOG_DEBUG, "fn: realign_packet");
+
+  /* align fixed header */
+  pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
+
+  /* align variable header */
+  pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
+
+  /* align payload */
+  pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
+
+  return;
 }
 
 /**
@@ -419,7 +496,7 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
 void disect_raw_packet(struct mqtt_packet *pkt) {
   log_stderr(LOG_DEBUG, "fn: disect_raw_packet");
   /* assign fixed header */
-  pkt->fixed = (struct pkt_fixed_header *)&pkt->raw.buf;
+  pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
 
   /* size of fixed header */
   pkt->len = decode_remaining_len(pkt);
@@ -604,6 +681,10 @@ uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
  */
 void free_packet(struct mqtt_packet *pkt) {
   log_stderr(LOG_DEBUG, "fn: free_packet");
+
+  if (pkt->raw.buf) {
+    free(pkt->raw.buf);
+  }
 
   if (pkt) {
     free(pkt);

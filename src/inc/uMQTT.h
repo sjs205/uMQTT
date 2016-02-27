@@ -40,7 +40,7 @@
   #define MAX_REMAIN_LEN_PRODUCT    16384
 
   /* used to initialise a new packet */
-  #define UMQTT_MAX_PACKET_LEN      64
+  #define UMQTT_DEFAULT_PKT_LEN     64
 
 #else
   /* 128 * 128 * 128 * 128 = 268435456 */
@@ -48,7 +48,7 @@
   #define MAX_REMAIN_LEN_PRODUCT    268435456
 
   /* used to initialise a new packet */
-  #define UMQTT_MAX_PACKET_LEN      1024
+  #define UMQTT_DEFAULT_PKT_LEN     1024
 
 #endif
 
@@ -245,12 +245,11 @@ struct pkt_payload {
 /**
  * \brief Struct to store a TX/RX packet.
  * \param buf The TX/RX buffer.
- * \param len The number of valid bytes in the buffer, buf. Pointer to
- *        mqtt_packet->len;
+ * \param len The size of the memory allocated to buf.
  */
 struct raw_pkt {
-  uint8_t buf[UMQTT_MAX_PACKET_LEN];
-  size_t *len;
+  uint8_t *buf;
+  size_t len;
 };
 
 /**
@@ -298,7 +297,9 @@ umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
+umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len);
 size_t finalise_packet(struct mqtt_packet *pkt);
+void realign_packet(struct mqtt_packet *pkt);
 void disect_raw_packet(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);

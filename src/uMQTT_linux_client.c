@@ -137,7 +137,8 @@ umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
 
   umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
-  int n = write(skt->sockfd, &pkt->raw.buf, *pkt->raw.len);
+  print_packet(pkt);
+  int n = write(skt->sockfd, pkt->raw.buf, pkt->len);
   if (n < 0) {
     log_stderr(LOG_ERROR, "writing to socket");
     ret = UMQTT_SEND_ERROR;
@@ -158,7 +159,7 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
   umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
-  pkt->len = read(skt->sockfd, &pkt->raw.buf, sizeof(pkt->raw.buf) - 1);
+  pkt->len = read(skt->sockfd, pkt->raw.buf, pkt->raw.len);
   if (pkt->raw.len < 0) {
     log_stderr(LOG_ERROR, "reading from socket");
     ret = UMQTT_RECEIVE_ERROR;
