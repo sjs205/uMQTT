@@ -73,7 +73,7 @@ static int print_usage() {
       "                                 WARN\n"
       "                                 INFO (default)\n"
       "                                 DEBUG\n"
-      "                                 DEBUG_THREAD\n"
+      "                                 DEBUG_FN\n"
       "\n");
 
   return 0;

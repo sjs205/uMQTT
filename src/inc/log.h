@@ -33,7 +33,7 @@ typedef enum {
   LOG_WARN,
   LOG_INFO,
   LOG_DEBUG,
-  LOG_DEBUG_THREAD
+  LOG_DEBUG_FN
 } log_level_t;
 
 

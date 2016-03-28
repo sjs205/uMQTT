@@ -50,8 +50,8 @@ static void get_log_level_str(log_level_t level, char *buf) {
     case LOG_DEBUG:
       strcpy(buf, "DEBUG");
       break;
-    case LOG_DEBUG_THREAD:
-      strcpy(buf, "DEBUG_THREAD");
+    case LOG_DEBUG_FN:
+      strcpy(buf, "DEBUG_FN");
       break;
   }
 
@@ -75,8 +75,8 @@ log_level_t set_log_level_str(char *level) {
     ret = log_level(LOG_WARN);
   } else if(!strcmp(level, "ERROR")) {
     ret = log_level(LOG_ERROR);
-  } else if(!strcmp(level, "DEBUG_THREAD")) {
-    ret = log_level(LOG_DEBUG_THREAD);
+  } else if(!strcmp(level, "DEBUG_FN")) {
+    ret = log_level(LOG_DEBUG_FN);
   } else if(!strcmp(level, "DEBUG")) {
     ret = log_level(LOG_DEBUG);
   } else {

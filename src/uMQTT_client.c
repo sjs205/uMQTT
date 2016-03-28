@@ -35,7 +35,7 @@
  * \param conn_p Pointer to the address of the new connection struct.
  */
 void init_connection(struct broker_conn **conn_p) {
-  log_stderr(LOG_DEBUG, "fn: init_connection");
+  log_stderr(LOG_DEBUG_FN, "fn: init_connection");
 
   struct broker_conn *conn;
 
@@ -78,7 +78,7 @@ void register_connection_methods(struct broker_conn *conn,
     umqtt_ret (*receive_method)(struct broker_conn *, struct mqtt_packet *),
     umqtt_ret (*process_method)(struct broker_conn *, struct mqtt_packet *),
     void (*free_method)(struct broker_conn *)) {
-  log_stderr(LOG_DEBUG, "fn: register_connection_methods");
+  log_stderr(LOG_DEBUG_FN, "fn: register_connection_methods");
 
   if (connect_method) {
     conn->connect_method = connect_method;
@@ -113,7 +113,7 @@ void register_connection_methods(struct broker_conn *conn,
  * \return umqtt_ret return code.
  */
 umqtt_ret init_process_methods(struct mqtt_process_methods **proc_p) {
-  log_stderr(LOG_DEBUG, "fn: init_process_methods");
+  log_stderr(LOG_DEBUG_FN, "fn: init_process_methods");
   struct mqtt_process_methods *proc;
 
   if (!(proc = calloc(1, sizeof(struct mqtt_process_methods)))) {
@@ -159,7 +159,7 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
   umqtt_ret (*pingreq_method)(struct broker_conn *, struct mqtt_packet *),
   umqtt_ret (*pingresp_method)(struct broker_conn *, struct mqtt_packet *),
   umqtt_ret (*disconnect_method)(struct broker_conn *, struct mqtt_packet *)) {
-  log_stderr(LOG_DEBUG, "fn: register_process_methods");
+  log_stderr(LOG_DEBUG_FN, "fn: register_process_methods");
 
   struct mqtt_process_methods *proc;
   if (init_process_methods(&proc)) {
@@ -236,7 +236,7 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
  */
 umqtt_ret broker_set_clientid(struct broker_conn *conn, const char *clientid,
     size_t len) {
-  log_stderr(LOG_DEBUG, "fn: broker_set_clientid");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_set_clientid");
 
   if (!strncpy(conn->client.clientid, clientid, len)) {
     log_stderr(LOG_ERROR, "Failed to copy clientid");
@@ -253,7 +253,7 @@ umqtt_ret broker_set_clientid(struct broker_conn *conn, const char *clientid,
  * \return umqtt_ret
  */
 umqtt_ret broker_connect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG, "fn: broker_connect");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_connect");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -328,7 +328,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
  * \param pkt The Packet to send to the broker
  */
 umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG, "fn: broker_send_packet");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_send_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
   if (conn->send_method) {
@@ -345,7 +345,7 @@ umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \param pkt Pointer to the incoming packet.
  */
 umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG, "fn: broker_receive_packet");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_receive_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -364,7 +364,7 @@ umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pk
  * \param pkt The packet to be processed.
  */
 umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG, "fn: broker_process_packet");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_process_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -550,7 +550,7 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
 umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
     uint8_t retain, uint8_t qos, uint8_t dup, size_t topic_len, uint8_t
     *payload, size_t pay_len, uint8_t flags) {
-  log_stderr(LOG_DEBUG, "fn: broker_publish");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_publish");
 
   struct mqtt_packet *pkt = construct_default_packet(PUBLISH, payload,
       pay_len);
@@ -580,7 +580,7 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
  */
 umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     size_t topic_len) {
-  log_stderr(LOG_DEBUG, "fn: broker_subscribe");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_subscribe");
   umqtt_ret ret = UMQTT_SUCCESS;
 
   /* send subscribe packet */
@@ -635,7 +635,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
  * \param conn The connection to close.
  */
 umqtt_ret broker_disconnect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG, "fn: broker_disconnect");
+  log_stderr(LOG_DEBUG_FN, "fn: broker_disconnect");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -669,7 +669,7 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
  * \param pkt The packet to free.
  */
 void free_process_methods(struct mqtt_process_methods *proc) {
-  log_stderr(LOG_DEBUG, "fn: free_process_methods");
+  log_stderr(LOG_DEBUG_FN, "fn: free_process_methods");
   if (proc) {
     free(proc);
   }
@@ -682,7 +682,7 @@ void free_process_methods(struct mqtt_process_methods *proc) {
  * \param conn The connection to free.
  */
 void free_connection(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG, "fn: free_connection");
+  log_stderr(LOG_DEBUG_FN, "fn: free_connection");
 
   if (conn->free_method) {
     conn->free_method(conn);

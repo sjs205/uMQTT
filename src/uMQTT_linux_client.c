@@ -45,7 +45,7 @@
  */
 void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,
     unsigned int port) {
-  log_stderr(LOG_DEBUG, "fn: init_linux_socket_connection");
+  log_stderr(LOG_DEBUG_FN, "fn: init_linux_socket_connection");
 
   struct broker_conn *conn;
 
@@ -79,7 +79,7 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
  * \return mqtt_ret
  */
 umqtt_ret linux_socket_connect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG, "fn: linux_socket_connect");
+  log_stderr(LOG_DEBUG_FN, "fn: linux_socket_connect");
 
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
@@ -113,7 +113,7 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
  * \return mqtt_ret
  */
 umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG, "fn: linux_socket_disconnect");
+  log_stderr(LOG_DEBUG_FN, "fn: linux_socket_disconnect");
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   if (skt->sockfd) {
@@ -131,7 +131,7 @@ umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
  * \param pkt Pointer to the packet to be sent.
  */
 umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG, "fn: send_socket_packet");
+  log_stderr(LOG_DEBUG_FN, "fn: send_socket_packet");
 
   log_stderr(LOG_DEBUG, "TX: %s", get_type_string(pkt->fixed->generic.type));
 
@@ -154,7 +154,7 @@ umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \return Number of bytes read.
  */
 umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG, "fn: read_socket_packet");
+  log_stderr(LOG_DEBUG_FN, "fn: read_socket_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
@@ -181,7 +181,7 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \param conn The connection to free.
  */
 void free_linux_socket(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG, "fn: free_linux_socket");
+  log_stderr(LOG_DEBUG_FN, "fn: free_linux_socket");
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
   if (skt) {
     free(skt);
