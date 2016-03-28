@@ -98,9 +98,9 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
   }
 
   if (connect(skt->sockfd, (struct sockaddr *)&skt->serv_addr,
-        sizeof(skt->serv_addr)) < 0)
+        sizeof(skt->serv_addr)) == -1)
   {
-    log_stderr(LOG_ERROR, "Connect Failed");
+    log_stderr(LOG_ERROR, "Connect Failed: %s", strerror(errno));
     return UMQTT_CONNECT_ERROR;
   }
 
