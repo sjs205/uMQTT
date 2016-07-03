@@ -1,0 +1,11 @@
+CC = sdcc
+CFLAGS = -I$(INCDIR) -V --std-c99 -DSDCC -DMICRO_CLIENT -S -W
+#--Werror
+
+SOURCES := src/uMQTT.c src/uMQTT_client.c
+OBJECTS = $(SOURCES:.c=.o)
+
+build: $(SOURCES) $(OBJECTS)
+
+.c.o:
+	$(CC) $(CFLAGS) $<

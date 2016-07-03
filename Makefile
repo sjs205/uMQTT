@@ -42,6 +42,9 @@ apps: setup srcs
 tests: setup srcs
 	$(MAKE) -C src/tests/ tests
 
+sdcc:
+	$(MAKE) -f src/Makefile.sdcc
+
 debug: CFLAGS += -DDEBUG -g -O0
 debug: all
 

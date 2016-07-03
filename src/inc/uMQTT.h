@@ -26,6 +26,25 @@
  *****************************************************************************/
 #include <stdint.h>
 
+#ifndef SDCC
+#define SDCC                0
+#endif
+
+#ifndef MICRO_CLIENT
+#define MICRO_CLIENT        0
+#endif
+
+#if SDCC
+/* not supported by sdcc compiler */
+#define ATTR_PACKED
+#else
+#define ATTR_PACKED __attribute__((__packed__))
+#endif
+
+#ifndef MICRO_CLIENT
+#define MICRO_CLIENT        0
+#endif
+
 /* default defines - some can be overridden */
 #define MQTT_PROTO_NAME           "MQTT"
 #define MQTT_PROTO_LEVEL          0x04
@@ -37,8 +56,9 @@
 #define MQTT_MAX_FIXED_HDR_LENGTH 5
 #define MQTT_CLIENTID_MAX_LEN     23
 #define UTF8_ENC_STR_MAX_LEN      65535
+
 /* Remaining length max bytes */
-#ifdef MICRO_CLIENT
+#if MICRO_CLIENT
   /* 128 * 128 = 16384 */
   #define MAX_REMAIN_LEN_BYTES      2
   #define MAX_REMAIN_LEN_PRODUCT    16384
@@ -94,7 +114,7 @@ typedef enum {
   PINGRESP,
   DISCONNECT,
   RESERVED_15
-} __attribute__((__packed__)) ctrl_pkt_type;
+} ATTR_PACKED ctrl_pkt_type;
 
 /**
  * \brief Connect return codes.
@@ -104,8 +124,7 @@ typedef enum {
   QOS_AT_LEAST_ONCE   = 0x01,
   QOS_EXACTLY_ONCE    = 0x02,
   QOS_RESERVED,
-} __attribute__((__packed__)) qos_t;
-
+} ATTR_PACKED qos_t;
 /**
  * \brief MQTT protocol level versions.
  */
@@ -146,22 +165,22 @@ typedef enum {
  * \param len_lsb Length of the string - LSB.
  * \param utf8_str Pointer to the actual string data.
  */
-struct __attribute__((__packed__)) utf8_enc_str {
+struct utf8_enc_str {
   uint8_t len_msb;
   uint8_t len_lsb;
   char utf8_str;
-};
+} ATTR_PACKED;
 
 /**
  * \brief Struct to store a generic fixed header of a control packet.
  * \param type The type of control packet.
  * \param reserved Reserved for future use - see MQTT spec.
  */
-struct __attribute__((__packed__)) pkt_generic_fixed_header {
+struct pkt_generic_fixed_header {
 
   uint8_t reserved                : 4;
   ctrl_pkt_type type              : 4;
-};
+} ATTR_PACKED;
 
 /**
  * \brief Struct to store the fixed header of a PUBLISH control packet.
@@ -170,13 +189,13 @@ struct __attribute__((__packed__)) pkt_generic_fixed_header {
  * \param dub_flag Flag to indicate whether packet is a duplicate.
  * \param type The type of control packet.
  */
-struct __attribute__((__packed__)) pkt_publish_fixed_header {
+struct pkt_publish_fixed_header {
 
   uint8_t retain                  : 1;
   qos_t qos                       : 2;
   uint8_t dup                     : 1;
   ctrl_pkt_type                   : 4;
-};
+} ATTR_PACKED;
 
 /**
  * \brief Struct to store the fixed header of a control packet.
@@ -186,7 +205,7 @@ struct __attribute__((__packed__)) pkt_publish_fixed_header {
  *                   the fixed header - note, currently, only 127 bytes
  *                   remaining length supported.
  */
-struct __attribute__((__packed__)) pkt_fixed_header {
+struct pkt_fixed_header {
 
   union {
     struct pkt_generic_fixed_header generic;
@@ -194,7 +213,7 @@ struct __attribute__((__packed__)) pkt_fixed_header {
   };
 
   uint8_t remain_len[MAX_REMAIN_LEN_BYTES];
-};
+} ATTR_PACKED;
 
 /**
  * \brief Struct to store the CONNECT control packet flags.
@@ -205,7 +224,7 @@ struct __attribute__((__packed__)) pkt_fixed_header {
  * \param vill_flag Flag indicating will.
  * \param clean_session_flag Flag indicating whether clean session is active.
  */
-struct __attribute__((__packed__)) connect_flags {
+struct connect_flags {
   uint8_t reserved                : 1;
   uint8_t clean_session_flag      : 1;
   uint8_t will_flag               : 1;
@@ -213,7 +232,7 @@ struct __attribute__((__packed__)) connect_flags {
   uint8_t will_retain_flag        : 1;
   uint8_t pass_flag               : 1;
   uint8_t user_flag               : 1;
-};
+} ATTR_PACKED;
 
 /**
  * \brief Struct to store the variable header of a CONNECT control packet.
@@ -223,13 +242,13 @@ struct __attribute__((__packed__)) connect_flags {
  * \param flags The CONNECT packet flags.
  * \param keep_alive Number of seconds a session should be kept alive.
  */
-struct __attribute__((__packed__)) connect_variable_header {
+struct connect_variable_header {
   uint16_t name_len               : 16;
   uint8_t proto_name[4];
   uint8_t proto_level;
   struct connect_flags flags;
   uint16_t keep_alive             :16;
-};
+} ATTR_PACKED;
 
 /**
  * \brief Struct to store the variable header of a CONNACK control packet.
