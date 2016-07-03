@@ -25,9 +25,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
-#include "inc/uMQTT.h"
+#include "uMQTT.h"
+
+#ifdef MICRO_CLIENT
+#define LOG_DEBUG_FN(fmt, ...)
+#define LOG_DEBUG(fmt, ...)
+#define LOG_ERROR(fmt, ...)
+#else
 #include "inc/log.h"
+#endif
 
 /**
  * \brief Function to allocate memory for an mqtt packet.
@@ -35,6 +43,7 @@
  * \return umqtt_ret return code.
  */
 umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
+
   struct mqtt_packet *pkt;
 
   LOG_DEBUG_FN("fn: init_packet");
@@ -96,6 +105,7 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
  */
 umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type) {
+
   umqtt_ret ret = UMQTT_SUCCESS;
 
   LOG_DEBUG_FN("fn: init_packet_variable_header");
@@ -174,7 +184,9 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
  */
 umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
     qos_t qos, uint8_t dup) {
+
   LOG_DEBUG_FN("fn: set_publish_fixed_flags");
+
   if (pkt) {
     if (retain) {
       pkt->fixed->publish.retain = 1;
@@ -208,7 +220,9 @@ umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
  * \return big-endian 16-bit packet identifier.
  */
 uint16_t generate_packet_id(uint16_t pkt_id) {
+
   static uint16_t packet_id = 1;
+
   LOG_DEBUG_FN("fn: generate_packet_id");
 
   if (pkt_id > 0) {
@@ -231,6 +245,7 @@ uint16_t generate_packet_id(uint16_t pkt_id) {
  * \return Host format 16-bit packet identifier.
  */
 uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id) {
+
   LOG_DEBUG_FN("fn: set_packet_pkt_id");
 
   if ((pkt->fixed->generic.type == CONNECT) ||
@@ -263,6 +278,7 @@ uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id) {
  * \return Host format 16-bit packet identifier.
  */
 uint16_t get_packet_pkt_id(struct mqtt_packet *pkt) {
+
   LOG_DEBUG_FN("fn: get_packet_pkt_id");
 
   if ((pkt->fixed->generic.type == CONNECT) ||
@@ -327,7 +343,7 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt,
  * \param pkt Pointer to the address of the packet.
  */
 umqtt_ret set_connect_variable_header(struct mqtt_packet *pkt,
-    struct connect_flags flags, uint16_t keep_alive) {
+    struct connect_flags *flags, uint16_t keep_alive) {
 
   return UMQTT_SUCCESS;
 }
@@ -346,9 +362,10 @@ umqtt_ret set_connect_variable_header(struct mqtt_packet *pkt,
  */
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len) {
-  LOG_DEBUG_FN("fn: init_packet_payload");
 
   umqtt_ret ret = UMQTT_SUCCESS;
+
+  LOG_DEBUG_FN("fn: init_packet_payload");
 
   /* Ensure packet type supports a payload */
   if ((pkt->fixed->generic.type == CONNECT) ||
@@ -442,6 +459,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
     const char *username, const char *password, const char *topic,
     const char *message) {
+
   LOG_DEBUG_FN("fn: set_connect_payload");
 
   /* set clientid */
@@ -496,10 +514,11 @@ umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
  * \return the number of bytes saved
  */
 umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
-  LOG_DEBUG_FN("fn: resize_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
   uint8_t *buf = NULL;
+
+  LOG_DEBUG_FN("fn: resize_packet");
 
   buf = realloc((*pkt_p)->raw.buf, len * sizeof(uint8_t));
   if (!buf) {
@@ -531,6 +550,7 @@ umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
  */
 umqtt_ret set_un_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos) {
+
   LOG_DEBUG_FN("fn: set_un_subscribe_payload");
 
   /* set topic */
@@ -556,9 +576,10 @@ umqtt_ret set_un_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
  * \return Pointer to new mqtt_packet struct, 0 on failurer.
  */
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type) {
-  LOG_DEBUG_FN("fn: construct_packet_headers");
 
   struct mqtt_packet *pkt = '\0';
+
+  LOG_DEBUG_FN("fn: construct_packet_headers");
 
   if (init_packet(&pkt)) {
     free_packet(pkt);
@@ -587,9 +608,12 @@ struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type) {
  */
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len) {
+
+  struct mqtt_packet *pkt;
+
   LOG_DEBUG_FN("fn: construct_default_packet");
 
-  struct mqtt_packet *pkt = construct_packet_headers(type);
+  pkt = construct_packet_headers(type);
 
   if (init_packet_payload(pkt, type, payload, pay_len)) {
     free_packet(pkt);
@@ -606,10 +630,11 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
  * \return the number of bytes saved
  */
 size_t finalise_packet(struct mqtt_packet *pkt) {
-  LOG_DEBUG_FN("fn: finalise_packet");
 
   size_t fix_len = pkt->fix_len;
   size_t delta = 0;
+
+  LOG_DEBUG_FN("fn: finalise_packet");
 
   encode_remaining_len(pkt, (pkt->var_len + pkt->pay_len));
 
@@ -640,6 +665,7 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
  * \param pkt The mxtt_packet to realign.
  */
 void realign_packet(struct mqtt_packet *pkt) {
+
   LOG_DEBUG_FN("fn: realign_packet");
 
   /* align fixed header */
@@ -660,7 +686,9 @@ void realign_packet(struct mqtt_packet *pkt) {
  * \param pkt The mxtt_packet to disect.
  */
 umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
+
   umqtt_ret ret = UMQTT_SUCCESS;
+
   LOG_DEBUG_FN("fn: disect_raw_packet");
 
   /* assign fixed header */
@@ -798,8 +826,11 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
  * \param n Number of bytes to move backwards
  */
 void memmove_back(uint8_t *mem, size_t delta, size_t n) {
-  LOG_DEBUG_FN("fn: memmove_back");
+
   size_t i;
+
+  LOG_DEBUG_FN("fn: memmove_back");
+
   if (mem) {
     for (i = 0; i <= n; i++) {
       mem[i] = mem[i + delta];
@@ -815,8 +846,11 @@ void memmove_back(uint8_t *mem, size_t delta, size_t n) {
  * \param len The length that should be encoded.
  */
 uint8_t required_remaining_len_bytes(unsigned int len) {
-  LOG_DEBUG_FN("fn: required_remaining_length_bytes");
+
   uint8_t i = 0;
+
+  LOG_DEBUG_FN("fn: required_remaining_length_bytes");
+
   do {
     len /= 128;
 
@@ -834,8 +868,11 @@ uint8_t required_remaining_len_bytes(unsigned int len) {
  * \param len The length that should be encoded.
  */
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
-  LOG_DEBUG_FN("fn: encode_remaining_len");
+
   uint8_t i = 0;
+
+  LOG_DEBUG_FN("fn: encode_remaining_len");
+
   do {
     pkt->fixed->remain_len[i] = len % 128;
     len /= 128;
@@ -859,10 +896,13 @@ void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
  * \return The length that should be encoded.
  */
 unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
-  LOG_DEBUG_FN("fn: decode_remaining_len");
+
   uint8_t i = 0;
   unsigned int len = 0;
   unsigned int product = 1;
+
+  LOG_DEBUG_FN("fn: decode_remaining_len");
+
   do {
     len += (pkt->fixed->remain_len[i] & 127) * product;
 
@@ -886,6 +926,9 @@ unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
  */
 uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len) {
+
+  size_t i;
+
   LOG_DEBUG_FN("fn: encode_utf8_string");
 
   if (len > 0xfffe) {
@@ -893,7 +936,10 @@ uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     return 0;
   }
 
-  len = strnlen(buf, len);
+  /* strnlen() */
+  for(i = 0; (i < len) && buf[i]; ++i);
+  len = i;
+
   memcpy(&utf8_str->utf8_str, buf, len);
 
   utf8_str->len_lsb = (uint8_t)len;
@@ -910,7 +956,9 @@ uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
  * \return len of decoded string
  */
 uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str) {
+
   uint16_t len = 0;
+
   LOG_DEBUG_FN("fn: decode_utf8_string");
 
   len = (uint16_t)(utf8_str->len_msb << 8) | utf8_str->len_lsb;
@@ -943,6 +991,7 @@ uint16_t utf8_enc_str_size(struct utf8_enc_str *utf8) {
  * \param pkt The packet to free.
  */
 void free_packet(struct mqtt_packet *pkt) {
+
   LOG_DEBUG_FN("fn: free_packet");
 
   if (pkt->raw.buf) {

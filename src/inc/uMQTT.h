@@ -26,6 +26,17 @@
  *****************************************************************************/
 #include <stdint.h>
 
+#ifdef SDCC
+/* not supported by sdcc compiler */
+#define ATTR_PACKED
+#else
+#define ATTR_PACKED __attribute__((__packed__))
+#endif
+
+#ifndef MICRO_CLIENT
+#define MICRO_CLIENT        0
+#endif
+
 /* default defines - some can be overridden */
 #define MQTT_PROTO_NAME           "MQTT"
 #define MQTT_PROTO_LEVEL          0x04
@@ -94,7 +105,7 @@ typedef enum {
   PINGRESP,
   DISCONNECT,
   RESERVED_15
-} __attribute__((__packed__)) ctrl_pkt_type;
+} ATTR_PACKED ctrl_pkt_type;
 
 /**
  * \brief Connect return codes.
@@ -104,8 +115,7 @@ typedef enum {
   QOS_AT_LEAST_ONCE   = 0x01,
   QOS_EXACTLY_ONCE    = 0x02,
   QOS_RESERVED,
-} __attribute__((__packed__)) qos_t;
-
+} ATTR_PACKED qos_t;
 /**
  * \brief MQTT protocol level versions.
  */
@@ -146,7 +156,7 @@ typedef enum {
  * \param len_lsb Length of the string - LSB.
  * \param utf8_str Pointer to the actual string data.
  */
-struct __attribute__((__packed__)) utf8_enc_str {
+struct ATTR_PACKED utf8_enc_str {
   uint8_t len_msb;
   uint8_t len_lsb;
   char utf8_str;
@@ -157,7 +167,7 @@ struct __attribute__((__packed__)) utf8_enc_str {
  * \param type The type of control packet.
  * \param reserved Reserved for future use - see MQTT spec.
  */
-struct __attribute__((__packed__)) pkt_generic_fixed_header {
+struct ATTR_PACKED pkt_generic_fixed_header {
 
   uint8_t reserved                : 4;
   ctrl_pkt_type type              : 4;
@@ -170,7 +180,7 @@ struct __attribute__((__packed__)) pkt_generic_fixed_header {
  * \param dub_flag Flag to indicate whether packet is a duplicate.
  * \param type The type of control packet.
  */
-struct __attribute__((__packed__)) pkt_publish_fixed_header {
+struct ATTR_PACKED pkt_publish_fixed_header {
 
   uint8_t retain                  : 1;
   qos_t qos                       : 2;
@@ -186,7 +196,7 @@ struct __attribute__((__packed__)) pkt_publish_fixed_header {
  *                   the fixed header - note, currently, only 127 bytes
  *                   remaining length supported.
  */
-struct __attribute__((__packed__)) pkt_fixed_header {
+struct ATTR_PACKED pkt_fixed_header {
 
   union {
     struct pkt_generic_fixed_header generic;
@@ -205,7 +215,7 @@ struct __attribute__((__packed__)) pkt_fixed_header {
  * \param vill_flag Flag indicating will.
  * \param clean_session_flag Flag indicating whether clean session is active.
  */
-struct __attribute__((__packed__)) connect_flags {
+struct ATTR_PACKED connect_flags {
   uint8_t reserved                : 1;
   uint8_t clean_session_flag      : 1;
   uint8_t will_flag               : 1;
@@ -223,7 +233,7 @@ struct __attribute__((__packed__)) connect_flags {
  * \param flags The CONNECT packet flags.
  * \param keep_alive Number of seconds a session should be kept alive.
  */
-struct __attribute__((__packed__)) connect_variable_header {
+struct ATTR_PACKED connect_variable_header {
   uint16_t name_len               : 16;
   uint8_t proto_name[4];
   uint8_t proto_level;
