@@ -77,7 +77,8 @@
 char *get_type_string(ctrl_pkt_type type);
 void gen_unique_string(char *str, size_t len);
 void print_memory_bytes_hex(void *ptr, size_t len);
-void print_packet(struct mqtt_packet *pkt);
+void print_packet_hex_debug(struct mqtt_packet *pkt);
+void print_packet_raw(struct mqtt_packet *pkt);
 void print_publish_packet(struct mqtt_packet *pkt);
 void print_packet_detailed(struct mqtt_packet *pkt);
 #endif                /* UMQTT__H */

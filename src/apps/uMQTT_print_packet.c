@@ -311,12 +311,14 @@ int main(int argc, char **argv) {
   pkt->raw.len = hex_str_to_uint((char *)pkt_buf, strlen((const char *)pkt_buf),
           pkt->raw.buf);
 
-  disect_raw_packet(pkt);
-  log_stderr(LOG_DEBUG, "Packet converion:");
-  log_stderr(LOG_DEBUG, "Packet in:\n%s", pkt_buf);
-  log_stderr(LOG_DEBUG, "Packet Out:");
-  print_memory_bytes_hex(pkt->raw.buf, pkt->raw.len);
-  print_packet_detailed(pkt);
+  ret = disect_raw_packet(pkt);
+  if (ret) {
+    log_stderr(LOG_ERROR, "Failed to decode %s packet.",
+        get_type_string(pkt->fixed->generic.type));
+  } else {
+    print_packet_detailed(pkt);
+    print_packet_hex_debug(pkt);
+  }
 
 cleanup:
   free_packet(pkt);

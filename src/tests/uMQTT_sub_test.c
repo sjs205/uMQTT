@@ -77,7 +77,7 @@ int main() {
   /* Send SUBSCRIBE and wait for SUBACK - although, note that this could be
      a PUBLISH msg. */
   log_stdout(LOG_INFO, "\nSending Packet\n--------------");
-  print_packet(sub_pkt);
+  print_packet_hex_debug(sub_pkt);
   conn->send_method(conn, sub_pkt);
 
   ret = conn->receive_method(conn, pkt); 
@@ -87,11 +87,11 @@ int main() {
   }
 
   log_stdout(LOG_INFO, "\nReceived Packet\n---------------");
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   /* PUBLISH message */
   log_stdout(LOG_INFO, "\nSending Packet\n--------------");
-  print_packet(pub_pkt);
+  print_packet_hex_debug(pub_pkt);
   ret = conn->send_method(conn, pub_pkt);
   if (ret) {
     log_stderr(LOG_ERROR, "Sending PUBLISH message failed");
@@ -106,7 +106,7 @@ int main() {
   }
 
   log_stdout(LOG_INFO, "\nReceived Packet\n---------------");
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   /* not fool proof */
   if (pkt->fixed->generic.type == PUBLISH) {

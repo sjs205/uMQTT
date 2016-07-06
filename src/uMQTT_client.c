@@ -286,8 +286,6 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
 
   finalise_packet(pkt);
 
-  print_packet(pkt);
-
   ret = conn->send_method(conn, pkt);
   free_packet(pkt);
   if (ret) {
@@ -400,7 +398,8 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         ret = conn->proc->publish_method(conn, pkt);
 
       } else {
-        print_publish_packet(pkt);
+
+        print_packet_hex_debug(pkt);
       }
       break;
 
@@ -496,9 +495,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         struct mqtt_packet *pkt_resp = construct_default_packet(PINGRESP, 0, 0);
         if (conn->send_method(conn, pkt)) {
           log_stderr(LOG_ERROR, "Failed to send PINGRESP packet");
-          if (log_level(LOG_NONE) == LOG_DEBUG) {
-            print_packet(pkt);
-          }
           ret = UMQTT_PACKET_ERROR;
         }
         free_packet(pkt_resp);
@@ -530,9 +526,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
   if (ret == UMQTT_PKT_NOT_SUPPORTED) {
     log_stderr(LOG_ERROR, "MQTT packet not currently supported: %s",
         get_type_string(pkt->fixed->generic.type));
-    if (log_level(LOG_NONE) == LOG_DEBUG) {
-      print_packet(pkt);
-    }
   }
 
   return ret;

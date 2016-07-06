@@ -70,7 +70,7 @@ int main() {
     goto free;
   }
 
-  print_packet(pub_pkt);
+  print_packet_hex_debug(pub_pkt);
   ret = conn->send_method(conn, pub_pkt);
   if (ret) {
     log_stderr(LOG_ERROR, "Sending PUBLISH message failed");

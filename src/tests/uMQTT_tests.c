@@ -111,9 +111,9 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
     log_stdout(LOG_INFO, "pkt1 len: %zu pkt2 len: %zu", pkt1->len, pkt2->len);
 
     log_stdout(LOG_INFO, "\nPacket 1:");
-    print_packet(pkt1);
+    print_packet_hex_debug(pkt1);
     log_stdout(LOG_INFO, "\nPacket 2:");
-    print_packet(pkt2);
+    print_packet_hex_debug(pkt2);
     return delta;
   }
 
@@ -129,9 +129,9 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
     log_stdout(LOG_INFO, "Packets match exactly");
   } else {
     log_stdout(LOG_INFO, "\nPacket 1:");
-    print_packet(pkt1);
+    print_packet_hex_debug(pkt1);
     log_stdout(LOG_INFO, "\nPacket 2:");
-    print_packet(pkt2);
+    print_packet_hex_debug(pkt2);
   }
 
   return delta;
@@ -158,7 +158,10 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
         0x04, 0x02, 0x00, 0x00, 0x00, 0x05, 0x75, 0x4D,
         0x51, 0x54, 0x54 };
       memcpy(pkt->raw.buf, connect, sizeof(connect));
-      disect_raw_packet(pkt);
+      if (disect_raw_packet(pkt)) {
+        log_stderr(LOG_ERROR, "Packet disect error");
+      }
+
       break;
 
     case PUBLISH: ;
@@ -170,7 +173,9 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
         0x50, 0x55, 0x42, 0x4C, 0x49, 0x53, 0x48, 0x20,
         0x70, 0x61, 0x63, 0x6B, 0x65, 0x74, 0x00 };
       memcpy(pkt->raw.buf, publish, sizeof(publish));
-      disect_raw_packet(pkt);
+      if (disect_raw_packet(pkt)) {
+        log_stderr(LOG_ERROR, "Packet disect error");
+      }
       break;
 
     case SUBSCRIBE: ;
@@ -179,28 +184,36 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
         0x82, 0x0E, 0x00, 0x00, 0x00, 0x09, 0x75, 0x4D,
         0x51, 0x54, 0x54, 0x5F, 0x50, 0x55, 0x42, 0x00 };
       memcpy(pkt->raw.buf, subscribe, sizeof(subscribe));
-      disect_raw_packet(pkt);
+      if (disect_raw_packet(pkt)) {
+        log_stderr(LOG_ERROR, "Packet disect error");
+      }
       break;
 
     case PINGREQ: ;
       /* default pingreq packet */
       uint8_t pingreq[39] = { 0xC0, 0x00 };
       memcpy(pkt->raw.buf, pingreq, sizeof(pingreq));
-      disect_raw_packet(pkt);
+      if (disect_raw_packet(pkt)) {
+        log_stderr(LOG_ERROR, "Packet disect error");
+      }
       break;
 
     case PINGRESP: ;
       /* default pingresp packet */
       uint8_t pingresp[39] = { 0xD0, 0x00 };
       memcpy(pkt->raw.buf, pingresp, sizeof(pingresp));
-      disect_raw_packet(pkt);
+      if (disect_raw_packet(pkt)) {
+        log_stderr(LOG_ERROR, "Packet disect error");
+      }
       break;
 
     case DISCONNECT: ;
       /* default disconnect packet */
       uint8_t disconnect[39] = { 0xE0, 0x00 };
       memcpy(pkt->raw.buf, disconnect, sizeof(disconnect));
-      disect_raw_packet(pkt);
+      if (disect_raw_packet(pkt)) {
+        log_stderr(LOG_ERROR, "Packet disect error");
+      }
       break;
 
     default:

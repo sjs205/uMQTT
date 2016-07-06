@@ -137,7 +137,7 @@ umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
 
   umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
-  print_packet(pkt);
+  print_packet_raw(pkt);
   int n = write(skt->sockfd, pkt->raw.buf, pkt->len);
   if (n < 0) {
     log_stderr(LOG_ERROR, "writing to socket");
@@ -164,13 +164,18 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
     log_stderr(LOG_ERROR, "reading from socket");
     ret = UMQTT_RECEIVE_ERROR;
   } else {
-    disect_raw_packet(pkt);
-
+    ret = disect_raw_packet(pkt);
     log_stderr(LOG_DEBUG, "RX: %s", get_type_string(pkt->fixed->generic.type));
+    print_packet_raw(pkt);
 
-    /* can we process the message? */
-    if (conn->process_method) {
-      ret = conn->process_method(conn, pkt);
+    if (ret) {
+      log_stderr(LOG_ERROR, "Failed to decode %s packet.",
+          get_type_string(pkt->fixed->generic.type));
+    } else {
+      /* can we process the message? */
+      if (conn->process_method) {
+        ret = conn->process_method(conn, pkt);
+      }
     }
   }
   return ret;

@@ -235,7 +235,7 @@ void print_memory_bytes_hex(void *ptr, size_t len) {
  * \brief Function to print a packet.
  * \param pkt Pointer to the packet to be printed
  */
-void print_packet(struct mqtt_packet *pkt) {
+void print_packet_hex_debug(struct mqtt_packet *pkt) {
 
   log_stderr(LOG_DEBUG, "%s Packet Type:", get_type_string(pkt->fixed->generic.type));
 
@@ -246,22 +246,33 @@ void print_packet(struct mqtt_packet *pkt) {
   if (pkt->var_len) {
     log_stderr(LOG_DEBUG, "Variable header:");
     log_stderr(LOG_DEBUG, "Length: %zu", pkt->var_len);
-    print_memory_bytes_hex((void *)pkt->variable, pkt->var_len);
+    /* print variable header with oversized packet guard */
+    print_memory_bytes_hex((void *)pkt->variable,
+        (pkt->var_len >= pkt->len) ? pkt->len : pkt->var_len);
   } else {
     log_stderr(LOG_DEBUG, "No Variable header.");
   }
 
-  if (pkt->pay_len) {
+  /* print payload with oversized packet guard */
+  if (pkt->pay_len && ((pkt->pay_len + pkt->var_len) < pkt->len)) {
     log_stderr(LOG_DEBUG, "Payload:");
     log_stderr(LOG_DEBUG, "Length: %zu", pkt->pay_len);
-    print_memory_bytes_hex((void *)&pkt->payload->data,
-        pkt->pay_len);
+    print_memory_bytes_hex((void *)&pkt->payload->data, pkt->pay_len);
   } else {
     log_stderr(LOG_DEBUG, "No Payload.");
   }
+  return;
+}
+
+/**
+ * \brief Function to print a raw packet based on the pkt->len size.
+ * \param pkt Pointer to the packet to be printed
+ */
+void print_packet_raw(struct mqtt_packet *pkt) {
 
   log_stderr(LOG_DEBUG, "Raw packet:");
   print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
+  return;
 }
 
 /**
@@ -272,7 +283,8 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
   uint16_t len = 0;
   char buf[UTF8_ENC_STR_MAX_LEN];
 
-  log_stdout(LOG_INFO, "\n%s MSG", get_type_string(pkt->fixed->generic.type));
+  log_stdout(LOG_INFO, "---------------------------------------------------");
+  log_stdout(LOG_INFO, "%s PACKET", get_type_string(pkt->fixed->generic.type));
 
   switch (pkt->fixed->generic.type) {
     case RESERVED_0:
@@ -302,7 +314,7 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
 
       if (pkt->variable->connect.will_flag) {
         log_stderr(LOG_DEBUG, "Will topic flag set:");
-        log_stdout(LOG_INFO, "  Will Quality of service:");
+        log_stdout(LOG_INFO, "  Will QoS:");
         log_stdout(LOG_INFO, "    %d - %s", pkt->variable->connect.will_qos_flag,
             get_qos_string(pkt->variable->connect.will_qos_flag));
 
@@ -315,7 +327,7 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
       }
 
       if (pkt->variable->connect.clean_session_flag) {
-        log_stderr(LOG_DEBUG, "Clean Session flag set.");
+        log_stderr(LOG_DEBUG, "Clean Session flag set");
       }
 
       if (pkt->variable->connect.keep_alive) {
@@ -326,9 +338,9 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
 
     case CONNACK:
       if (pkt->variable->connack.session_present_flag) {
-        log_stdout(LOG_INFO, "Session present on broker.");
+        log_stdout(LOG_INFO, "Session present on broker");
       } else {
-        log_stdout(LOG_INFO, "No session present on broker.");
+        log_stdout(LOG_INFO, "No session present on broker");
       }
       log_stdout(LOG_INFO, "CONNECT return: %s",
           get_connect_ret_string(pkt->variable->connack.connect_ret));
@@ -336,23 +348,29 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
 
     case PUBLISH:
       log_stdout(LOG_INFO, "Publish flags:");
+
       if (pkt->fixed->publish.dup) {
         log_stdout(LOG_INFO, "  Duplicate packet.");
       }
-      log_stdout(LOG_INFO, "  Quality of service:");
-      log_stdout(LOG_INFO, "    %d - %s", pkt->fixed->publish.qos,
+
+      log_stdout(LOG_INFO, "  QoS: %d - %s", pkt->fixed->publish.qos,
           get_qos_string(pkt->fixed->publish.qos));
 
       if (pkt->fixed->publish.retain) {
-        log_stdout(LOG_INFO, "Retain flag set.");
+        log_stdout(LOG_INFO, "  Retain flag set.");
       }
+      if (pkt->fixed->publish.qos == QOS_AT_LEAST_ONCE ||
+          pkt->fixed->publish.qos == QOS_EXACTLY_ONCE) {
+        log_stdout(LOG_INFO, "Packet Identifier: %d",
+            pkt->variable->publish.pkt_id);
+      }
+
       len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
           | (pkt->variable->publish.topic.len_lsb));
       strncpy(buf, &pkt->variable->publish.topic.utf8_str, len);
       buf[len] = '\0';
       log_stdout(LOG_INFO, "TOPIC: %s", buf);
 
-      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->publish.pkt_id);
 
       strncpy(buf, (char *)&pkt->payload->data, pkt->pay_len);
       buf[pkt->pay_len] = '\0';
@@ -361,37 +379,35 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
 
     case PUBREL:
       if (pkt->fixed->generic.reserved != 0x2) {
-        log_stderr(LOG_ERROR, "Malformed fixed header");
+        log_stderr(LOG_ERROR, "Malformed fixed header %d",
+            pkt->fixed->generic.reserved);
       }
 
     case PUBACK:
     case PUBREC:
     case PUBCOMP:
-      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
-      break;
-
+      log_stdout(LOG_INFO, "Packet Identifier: %d",
+          pkt->variable->generic.pkt_id);
       break;
 
     case SUBSCRIBE:
-      if (pkt->fixed->generic.reserved != 0x2) {
-        log_stderr(LOG_ERROR, "Malformed fixed header");
-      }
-      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+      log_stdout(LOG_INFO, "Packet Identifier: %d",
+          pkt->variable->generic.pkt_id);
 
       /* decode topic - NOTE: only single topic currently supported */
       len = decode_utf8_string((char *)buf,
           (struct utf8_enc_str *)&pkt->payload);
-      log_stdout(LOG_INFO, "TOPIC: %s", buf);
+      log_stdout(LOG_INFO, "TOPIC: %s", (char *)buf);
 
-       // qos_t qos = (qos_t *)(pkt->payload + ++len);
-      //  log_stdout(LOG_INFO, "  topic QoS: %s",
-     //       get_qos_string(pkt->payload->data[++len]));
+      log_stdout(LOG_INFO, "  (QoS: %s)",
+          get_qos_string((qos_t )*(&pkt->payload->data + len + 2)));
 
       break;
 
     case SUBACK:
-      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
-      log_stdout(LOG_INFO, "    %d - %s", pkt->fixed->publish.qos,
+      log_stdout(LOG_INFO, "Packet Identifier: %d",
+          pkt->variable->generic.pkt_id);
+      log_stdout(LOG_INFO, "QoS: %d - %s", pkt->fixed->publish.qos,
           get_qos_string(pkt->fixed->publish.qos));
 
       log_stdout(LOG_INFO, "SUBACK return: %s",
@@ -399,26 +415,21 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
       break;
 
     case UNSUBSCRIBE:
-      if (pkt->fixed->generic.reserved != 0x2) {
-        log_stderr(LOG_ERROR, "Malformed fixed header");
-      }
-      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+      log_stdout(LOG_INFO, "Packet Identifier: %d",
+          pkt->variable->generic.pkt_id);
 
       /* decode topic - NOTE: only single topic currently supported */
       len = decode_utf8_string((char *)buf,
           (struct utf8_enc_str *)&pkt->payload);
       log_stdout(LOG_INFO, "TOPIC: %s", buf);
 
-      //uint8_t qos = pkt->payload[++len];
-     // log_stdout(LOG_INFO, "  topic QoS: %s",
-    //      get_qos_string(pkt->payload->data[++len]));
+      log_stdout(LOG_INFO, "  (QoS: %s)",
+          get_qos_string((qos_t )*(&pkt->payload->data + len + 2)));
       break;
 
     case UNSUBACK:
-      if (pkt->fixed->generic.reserved != 0x2) {
-        log_stderr(LOG_ERROR, "Malformed fixed header");
-      }
-      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+      log_stdout(LOG_INFO, "Packet Identifier: %d",
+          pkt->variable->generic.pkt_id);
       break;
 
     case PINGREQ:
@@ -438,17 +449,16 @@ void print_publish_packet(struct mqtt_packet *pkt) {
   if (pkt->fixed->generic.type == PUBLISH) {
     char buf[1024];
 
-    log_stdout(LOG_INFO, "\nPUBLISH MSG");
-
+    log_stdout(LOG_INFO, "---------------------------------------------------");
     uint16_t len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
         | (pkt->variable->publish.topic.len_lsb));
     strncpy(buf, &pkt->variable->publish.topic.utf8_str, len);
     buf[len] = '\0';
-    log_stdout(LOG_INFO, "TOPIC: %s", buf);
+    log_stdout(LOG_INFO, "PUBLISH Topic: %s", buf);
 
     strncpy(buf, (char *)&pkt->payload->data, pkt->pay_len);
     buf[pkt->pay_len] = '\0';
-    log_stdout(LOG_INFO, "PAYLOAD:\n%s", buf);
+    log_stdout(LOG_INFO, "%s", buf);
   }
 
   return;

@@ -80,7 +80,7 @@ int main() {
   /* connect packet */
   pkt = construct_default_packet(CONNECT, 0, 0);
 
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   free_packet(pkt);
 
@@ -89,35 +89,35 @@ int main() {
       (uint8_t *)"uMQTT test PUBLISH packet",
       sizeof("uMQTT test PUBLISH packet"));
 
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   free_packet(pkt);
 
   /* subscribe packet */
   pkt = construct_default_packet(SUBSCRIBE, 0, 0);
 
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   free_packet(pkt);
 
   /* pingreq packet */
   pkt = construct_default_packet(PINGREQ, 0, 0);
 
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   free_packet(pkt);
 
   /* pingresp packet */
   pkt = construct_default_packet(PINGRESP, 0, 0);
 
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   free_packet(pkt);
 
   /* disconnect packet */
   pkt = construct_default_packet(DISCONNECT, 0, 0);
 
-  print_packet(pkt);
+  print_packet_hex_debug(pkt);
 
   free_packet(pkt);
 
