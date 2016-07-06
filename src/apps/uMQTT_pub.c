@@ -254,8 +254,8 @@ int main(int argc, char **argv) {
     log_stdout(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
   }
 
-  log_stdout(LOG_INFO, "Constructiing MQTT PUBLISH packet with:");
-  log_stdout(LOG_INFO, "Topic; %s", topic);
+  log_stdout(LOG_INFO, "Constructing MQTT PUBLISH packet with:");
+  log_stdout(LOG_INFO, "Topic: %s", topic);
   log_stdout(LOG_INFO, "Message: %s", msg);
 
   struct mqtt_packet *pkt = construct_packet_headers(PUBLISH);

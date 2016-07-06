@@ -47,20 +47,25 @@
 static int print_usage() {
 
   fprintf(stderr,
-      "uMQTT_sub is an application that connects to an MQTT broker and sends a user defined\n"
-      "sublish pocket before disconnecting\n"
+      "uMQTT_sub is an application that connects to an MQTT broker and\n"
+      "subscribes to user defined topics.\n"
       "\n"
       "Usage: uMQTT_sub [options]\n"
       "General options:\n"
       " -h [--help]              : Displays this help and exits\n"
       "\n"
-      "Publish options:\n"
+      "Subscribe options:\n"
       " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
       "\n"
       "Broker options:\n"
-      " -b [--broker] <broker-IP>: Change the default broker IP - only IP addresses are\n"
-      "                            currently supported. Default: test.mosquitto.org\n"
+      " -b [--broker] <broker-IP>: Change the default broker IP - only IP\n"
+      "                            addresses are currently supported.\n"
+      "                            Default ip: test.mosquitto.org\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
+      "\n"
+      "Output options:\n"
+      " -d [--detail]            : Output detailed packet information\n"
+      "                            Default: output publish packet summary\n"
       "\n"
       "Debug options:\n"
       " -v [--verbose] <LEVEL>   : set verbose level to LEVEL\n"
@@ -79,7 +84,7 @@ static int print_usage() {
 int main(int argc, char **argv) {
 
   int ret;
-  int c, option_index = 0;
+  int c, option_index = 0, detail = 0;
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char broker_ip[16] = MQTT_BROKER_IP;
   int broker_port = MQTT_BROKER_PORT;
@@ -90,6 +95,7 @@ int main(int argc, char **argv) {
     /* These options set a flag. */
     {"help",   no_argument,             0, 'h'},
     {"verbose", required_argument,      0, 'v'},
+    {"detail", no_argument,             0, 'd'},
     {"topic", required_argument,        0, 't'},
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
@@ -100,7 +106,7 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hv:t:b:p:c:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hdv:t:b:p:c:", long_options, &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -112,6 +118,11 @@ int main(int argc, char **argv) {
           if (optarg) {
             set_log_level_str(optarg);
           }
+          break;
+
+        case 'd':
+          /* set detailed output */
+          detail = 1;
           break;
 
         case 't':
@@ -209,7 +220,13 @@ int main(int argc, char **argv) {
   while (1) {
     ret = conn->receive_method(conn, pkt); 
 
-    print_packet(pkt);
+    if (!ret) {
+      if (detail) {
+        print_packet_detailed(pkt);
+      } else {
+        print_publish_packet(pkt);
+      }
+    }
   }
 
 free:
