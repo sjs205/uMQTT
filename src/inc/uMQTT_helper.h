@@ -26,6 +26,7 @@
  *****************************************************************************/
 #include "uMQTT.h"
 
+/* Packet type strings */
 #define RESERVED_STR        "RESERVED\0"
 #define CONNECT_STR         "CONNECT\0"
 #define CONNACK_STR         "CONNACK\0"
@@ -42,6 +43,33 @@
 #define PINGRESP_STR        "PINGRESP\0"
 #define DISCONNECT_STR      "DISCONNECT\0"
 
+/* version strings */
+#define V1_STR              "v1.x"
+#define V2_STR              "v2.X"
+#define V3_V3_1_STR         "v3.0-v3.1"
+#define V3_1_1_STR          "v3.1.1"
+
+/* connect return strings */
+#define CONN_ACCEPTED_STR           "0x00 Connection Accepted"
+#define CONN_UNACCEPT_PROTO_VER_STR "0x01 Connection Refused, unacceptable protocol version"
+#define CONN_REF_IDENTIFIER_REJ_STR "0x02 Connection Refused, identifier rejected"
+#define CONN_REF_SERVER_UNAVAIL_STR "0x03 Connection Refused, Server unavailable"
+#define CONN_REF_BAD_USER_PASS_STR  "0x04 Connection Refused, bad user name or password"
+#define CONN_REF_NOT_AUTH_STR       "0x05 Connection Refused, not authorized"
+#define CONN_STATE_RESERVED_STR     "Return code reserved for future use"
+
+/* Quality Of Service strings */
+#define QOS_AT_MOST_ONCE_STR        "At most once delivery"
+#define QOS_AT_LEAST_ONCE_STR       "At least once delivery"
+#define QOS_EXACTLY_ONCE_STR        "Exactly once delivery"
+#define QOS_RESERVED_STR            "Reserved – must not be used"
+
+/* SUBACK return strings */
+#define SUB_SUCCESS_MAX_QOS_0_STR   "Success - Maximum QoS 0"
+#define SUB_SUCCESS_MAX_QOS_1_STR   "Success - Maximum QoS 1"
+#define SUB_SUCCESS_MAX_QOS_2_STR   "Success - Maximum QoS 2"
+#define SUB_FAILURE_STR             "Failure"
+
 #define UNIQUE_STR_CHARSET  "abcdefghijklmnopqrstuvwxyz" \
                             "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
                             "0123456789"
@@ -51,4 +79,5 @@ void gen_unique_string(char *str, size_t len);
 void print_memory_bytes_hex(void *ptr, size_t len);
 void print_packet(struct mqtt_packet *pkt);
 void print_publish_packet(struct mqtt_packet *pkt);
+void print_packet_detailed(struct mqtt_packet *pkt);
 #endif                /* UMQTT__H */

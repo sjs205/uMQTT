@@ -104,6 +104,111 @@ char *get_type_string(ctrl_pkt_type type) {
 }
 
 /**
+ * \brief Function to return the protocol version string.
+ * \param type The type string to return.
+ */
+char *get_proto_ver_string(proto_version ver) {
+  char *ret = 0;
+
+  switch (ver) {
+    case V1:
+      ret = V1_STR;
+      break;
+    case V2:
+      ret = V2_STR;
+      break;
+    case V3_V3_1:
+      ret = V3_V3_1_STR;
+      break;
+    case V3_1_1:
+      ret = V3_1_1_STR;
+      break;
+  }
+  return ret;
+}
+
+/**
+ * \brief Function to return the connect return string.
+ * \param type The connection ret string to return.
+ */
+char *get_connect_ret_string(connect_return state) {
+  char *ret = 0;
+
+  switch (state) {
+    case CONN_ACCEPTED:
+      ret = CONN_ACCEPTED_STR;
+      break;
+    case CONN_UNACCEPT_PROTO_VER:
+      ret = CONN_UNACCEPT_PROTO_VER_STR;
+      break;
+    case CONN_REF_IDENTIFIER_REJ:
+      ret = CONN_REF_IDENTIFIER_REJ_STR;
+      break;
+    case CONN_REF_SERVER_UNAVAIL:
+      ret = CONN_REF_SERVER_UNAVAIL_STR;
+      break;
+    case CONN_REF_BAD_USER_PASS:
+      ret = CONN_REF_BAD_USER_PASS_STR;
+      break;
+    case CONN_REF_NOT_AUTH:
+      ret = CONN_REF_NOT_AUTH_STR;
+      break;
+    default:
+      ret = CONN_STATE_RESERVED_STR;
+      break;
+  }
+  return ret;
+}
+
+/**
+ * \brief Function to return the SUBACK return string.
+ * \param type The type string to return.
+ */
+char *get_suback_return_string(suback_return sret) {
+  char *ret = 0;
+
+  switch (sret) {
+    case SUB_SUCCESS_MAX_QOS_0:
+      ret = SUB_SUCCESS_MAX_QOS_0_STR;
+      break;
+    case SUB_SUCCESS_MAX_QOS_1:
+      ret = SUB_SUCCESS_MAX_QOS_1_STR;
+      break;
+    case SUB_SUCCESS_MAX_QOS_2:
+      ret = SUB_SUCCESS_MAX_QOS_2_STR;
+      break;
+    case SUB_FAILURE:
+      ret = SUB_FAILURE_STR;
+      break;
+  }
+  return ret;
+
+}
+/**
+ * \brief Function to return the QoS string.
+ * \param type The QoS string to return.
+ */
+char *get_qos_string(qos_t qos) {
+  char *ret = 0;
+
+  switch (qos) {
+    case QOS_AT_MOST_ONCE:
+      ret = QOS_AT_MOST_ONCE_STR;
+      break;
+    case QOS_AT_LEAST_ONCE:
+      ret = QOS_AT_LEAST_ONCE_STR;
+      break;
+    case QOS_EXACTLY_ONCE:
+      ret = QOS_EXACTLY_ONCE_STR;
+      break;
+    case QOS_RESERVED:
+      ret = QOS_RESERVED_STR;
+      break;
+  }
+  return ret;
+}
+
+/**
  * \brief Function to print memory in hex.
  * \param ptr The memory to start printing.
  * \param len The number of bytes to print.
@@ -157,6 +262,171 @@ void print_packet(struct mqtt_packet *pkt) {
 
   log_stderr(LOG_DEBUG, "Raw packet:");
   print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
+}
+
+/**
+ * \brief Function to print a summary of a packet.
+ * \param pkt Pointer to the packet to be printed
+ */
+void print_packet_detailed(struct mqtt_packet *pkt) {
+  uint16_t len = 0;
+  char buf[UTF8_ENC_STR_MAX_LEN];
+
+  log_stdout(LOG_INFO, "\n%s MSG", get_type_string(pkt->fixed->generic.type));
+
+  switch (pkt->fixed->generic.type) {
+    case RESERVED_0:
+    case RESERVED_15:
+      break;
+
+    case CONNECT:
+      log_stdout(LOG_INFO, "Protocol name: %c%c%c%c",
+          pkt->variable->connect.proto_name[0],
+          pkt->variable->connect.proto_name[1],
+          pkt->variable->connect.proto_name[2],
+          pkt->variable->connect.proto_name[3]);
+      log_stdout(LOG_INFO, "Protocol version: %s",
+          get_proto_ver_string(pkt->variable->connect.proto_level));
+
+      if (pkt->variable->connect.user_flag) {
+        log_stderr(LOG_DEBUG, "Username flag set:");
+        /* get username from payload 
+           log_stderr(LOG_DEBUG, "  Username"); */
+      }
+
+      if (pkt->variable->connect.pass_flag) {
+        log_stderr(LOG_DEBUG, "Pass flag set:");
+        /* get password from payload 
+           log_stderr(LOG_DEBUG, "  Password"); */
+      }
+
+      if (pkt->variable->connect.will_flag) {
+        log_stderr(LOG_DEBUG, "Will topic flag set:");
+        log_stdout(LOG_INFO, "  Will Quality of service:");
+        log_stdout(LOG_INFO, "    %d - %s", pkt->variable->connect.will_qos_flag,
+            get_qos_string(pkt->variable->connect.will_qos_flag));
+
+        if (pkt->variable->connect.will_retain_flag) {
+          log_stdout(LOG_INFO, "Will Retain flag set.");
+        }
+        /* get will topic and will message from payload  */
+        log_stdout(LOG_INFO, "  Will TOPIC:\n");
+        log_stdout(LOG_INFO, "  Will Message:\n");
+      }
+
+      if (pkt->variable->connect.clean_session_flag) {
+        log_stderr(LOG_DEBUG, "Clean Session flag set.");
+      }
+
+      if (pkt->variable->connect.keep_alive) {
+        log_stderr(LOG_DEBUG, "Keep Alive set to: %d",
+            pkt->variable->connect.keep_alive);
+      }
+      break;
+
+    case CONNACK:
+      if (pkt->variable->connack.session_present_flag) {
+        log_stdout(LOG_INFO, "Session present on broker.");
+      } else {
+        log_stdout(LOG_INFO, "No session present on broker.");
+      }
+      log_stdout(LOG_INFO, "CONNECT return: %s",
+          get_connect_ret_string(pkt->variable->connack.connect_ret));
+      break;
+
+    case PUBLISH:
+      log_stdout(LOG_INFO, "Publish flags:");
+      if (pkt->fixed->publish.dup) {
+        log_stdout(LOG_INFO, "  Duplicate packet.");
+      }
+      log_stdout(LOG_INFO, "  Quality of service:");
+      log_stdout(LOG_INFO, "    %d - %s", pkt->fixed->publish.qos,
+          get_qos_string(pkt->fixed->publish.qos));
+
+      if (pkt->fixed->publish.retain) {
+        log_stdout(LOG_INFO, "Retain flag set.");
+      }
+      len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
+          | (pkt->variable->publish.topic.len_lsb));
+      strncpy(buf, &pkt->variable->publish.topic.utf8_str, len);
+      buf[len] = '\0';
+      log_stdout(LOG_INFO, "TOPIC: %s", buf);
+
+      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->publish.pkt_id);
+
+      strncpy(buf, (char *)&pkt->payload->data, pkt->pay_len);
+      buf[pkt->pay_len] = '\0';
+      log_stdout(LOG_INFO, "PAYLOAD:\n%s", buf);
+      break;
+
+    case PUBREL:
+      if (pkt->fixed->generic.reserved != 0x2) {
+        log_stderr(LOG_ERROR, "Malformed fixed header");
+      }
+
+    case PUBACK:
+    case PUBREC:
+    case PUBCOMP:
+      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+      break;
+
+      break;
+
+    case SUBSCRIBE:
+      if (pkt->fixed->generic.reserved != 0x2) {
+        log_stderr(LOG_ERROR, "Malformed fixed header");
+      }
+      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+
+      /* decode topic - NOTE: only single topic currently supported */
+      len = decode_utf8_string((char *)buf,
+          (struct utf8_enc_str *)&pkt->payload);
+      log_stdout(LOG_INFO, "TOPIC: %s", buf);
+
+       // qos_t qos = (qos_t *)(pkt->payload + ++len);
+      //  log_stdout(LOG_INFO, "  topic QoS: %s",
+     //       get_qos_string(pkt->payload->data[++len]));
+
+      break;
+
+    case SUBACK:
+      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+      log_stdout(LOG_INFO, "    %d - %s", pkt->fixed->publish.qos,
+          get_qos_string(pkt->fixed->publish.qos));
+
+      log_stdout(LOG_INFO, "SUBACK return: %s",
+          get_suback_return_string((suback_return)pkt->payload->data));
+      break;
+
+    case UNSUBSCRIBE:
+      if (pkt->fixed->generic.reserved != 0x2) {
+        log_stderr(LOG_ERROR, "Malformed fixed header");
+      }
+      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+
+      /* decode topic - NOTE: only single topic currently supported */
+      len = decode_utf8_string((char *)buf,
+          (struct utf8_enc_str *)&pkt->payload);
+      log_stdout(LOG_INFO, "TOPIC: %s", buf);
+
+      //uint8_t qos = pkt->payload[++len];
+     // log_stdout(LOG_INFO, "  topic QoS: %s",
+    //      get_qos_string(pkt->payload->data[++len]));
+      break;
+
+    case UNSUBACK:
+      if (pkt->fixed->generic.reserved != 0x2) {
+        log_stderr(LOG_ERROR, "Malformed fixed header");
+      }
+      log_stdout(LOG_INFO, "Packet Identifier %d.", pkt->variable->generic.pkt_id);
+      break;
+
+    case PINGREQ:
+    case PINGRESP:
+    case DISCONNECT:
+      break;
+  }
+  return;
 }
 
 /**

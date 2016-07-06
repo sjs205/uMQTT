@@ -316,6 +316,7 @@ int main(int argc, char **argv) {
   log_stderr(LOG_DEBUG, "Packet in:\n%s", pkt_buf);
   log_stderr(LOG_DEBUG, "Packet Out:");
   print_memory_bytes_hex(pkt->raw.buf, pkt->raw.len);
+  print_packet_detailed(pkt);
 
 cleanup:
   free_packet(pkt);
