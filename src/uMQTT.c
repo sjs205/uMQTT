@@ -654,7 +654,7 @@ unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
  * \param utf8_str Pointer to the struct holding the utf8_enc_str
  * \param buf The string to encode.
  * \param len The length of str
- * \return len of encoded string
+ * \return len of utf8 encoded string
  */
 uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len) {
@@ -673,6 +673,29 @@ uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
 
   /* subtract 1 for the utf8_str placeholder */
   return (uint16_t)((sizeof(struct utf8_enc_str) - 1)  + len);
+}
+
+/**
+ * \brief Function to decode a utf8 string and place the result in buffer.
+ * \param utf8_str Pointer to the struct holding the utf8_enc_str
+ * \param buf Buffer for the decoded string followed by \0.
+ * \return len of decoded string
+ */
+uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str) {
+  uint16_t len = 0;
+  log_stderr(LOG_DEBUG_FN, "fn: decode_utf8_string");
+
+  len = (utf8_str->len_msb << 8) | utf8_str->len_lsb;
+
+  if (len > 0xfffe) {
+    log_stderr(LOG_ERROR, "Malformed UTF8 string");
+    return 0;
+  }
+
+  memcpy(buf, &utf8_str->utf8_str, len);
+  buf[len] = '\0';
+
+  return len;
 }
 
 /**

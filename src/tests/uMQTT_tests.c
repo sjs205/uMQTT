@@ -29,6 +29,7 @@
 #include "uMQTT_helper.h"
 #include "../inc/log.h"
 
+#define TEST_STRING "The quick brown fox jumps over the lazy dog 1234567890"
 /**
  * \brief Function to test the encoding and decoding of the remaining packet
  *        length.
@@ -211,6 +212,63 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
   return pkt;
 }
 
+int test_utf8_encode_decode() {
+  int ret = 0;
+  char buf[sizeof(TEST_STRING)];
+  char utf8_buf[UTF8_ENC_STR_MAX_LEN];
+  struct utf8_enc_str *utf8 = (struct utf8_enc_str *)utf8_buf;
+
+  /* subtract 2 due to utf8_str lenth bytes */
+  uint16_t len_enc = encode_utf8_string(utf8, TEST_STRING,
+      sizeof(TEST_STRING) - 1) - 2;
+  uint16_t len_dec = decode_utf8_string(buf, utf8);
+
+  log_stdout(LOG_INFO,
+      "Testing UTF8 string encode and decode functions:");
+
+  /* test encoded string */
+  if (!strcmp(TEST_STRING, &utf8->utf8_str)) {
+    log_stdout(LOG_INFO, "String encoded correctly: %s", (char *)&utf8->utf8_str);
+  } else {
+    log_stderr(LOG_ERROR, "Encoded string mismatch: %s", (char *)&utf8->utf8_str);
+    ret = 1;
+  }
+
+  /* test encoded length */
+  if (((utf8->len_msb << 8) | utf8->len_lsb) == sizeof(TEST_STRING) - 1) {
+    log_stdout(LOG_INFO, "Encoded string length correctly");
+  } else {
+    log_stderr(LOG_ERROR, "Encoded string length mismatch");
+    log_stderr(LOG_ERROR, "input length: %zu Encoded length: %d",
+        sizeof(TEST_STRING), utf8->len_lsb);
+  }
+
+  /* test decoded string */
+  if (!strcmp(TEST_STRING, buf)) {
+    log_stdout(LOG_INFO, "String decoded correctly: %s", (char *)&utf8->utf8_str);
+  } else {
+    log_stderr(LOG_ERROR, "Decoded string mismatch: %s", (char *)&utf8->utf8_str);
+    ret = 1;
+  }
+
+  /* compare encode and decode lengths */
+  if (len_dec == (len_enc)) {
+    log_stdout(LOG_INFO, "Decode and encode string lengths match");
+  } else {
+    log_stderr(LOG_ERROR, "Decode and encode string lengths mismatch");
+    log_stderr(LOG_ERROR, "Decode length: %zu Encode length: %zu", len_dec,
+        len_enc);
+  }
+
+  if (ret) {
+    log_stdout(LOG_INFO, "UTF8 string encoding and decodeing failed");
+  } else {
+    log_stdout(LOG_INFO, "UTF8 string encoding and decoding passed");
+  }
+
+  return ret;
+}
+
 int test_packet_creation() {
   ctrl_pkt_type type;
   int delta = 0, fails = 0;
@@ -313,11 +371,15 @@ int main() {
   int ret = 0;
 
   if (test_enc_dec_remaining_pkt_len()) {
-    ret = 1;
+    ret += 1;
   }
 
-  if ((test_packet_creation())) {
-    ret = 1;
+  if (test_packet_creation()) {
+    ret += 1;
+  }
+
+  if (test_utf8_encode_decode()) {
+    ret += 1;
   }
 
   return ret;

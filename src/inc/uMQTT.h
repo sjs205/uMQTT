@@ -33,6 +33,7 @@
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
 #define UMQTT_DEFAULT_QOS         0
 
+#define UTF8_ENC_STR_MAX_LEN      65535
 /* Remaining length max bytes */
 #ifdef MICRO_CLIENT
   /* 128 * 128 = 16384 */
@@ -95,22 +96,44 @@ typedef enum {
  * \brief Connect return codes.
  */
 typedef enum {
-  QOS_AT_MOST_ONCE,
-  QOS_AT_LEAST_ONCE,
-  QOS_EXACTLY_ONCE,
+  QOS_AT_MOST_ONCE    = 0x00,
+  QOS_AT_LEAST_ONCE   = 0x01,
+  QOS_EXACTLY_ONCE    = 0x02,
   QOS_RESERVED,
 } __attribute__((__packed__)) qos_t;
+
 /**
- * \brief Connect return codes.
+ * \brief MQTT protocol level versions.
+ */
+typedef enum {
+  V1         = 0x01,
+  V2         = 0x02,
+  V3_V3_1    = 0x03,
+  V3_1_1     = 0x04,
+} proto_version;
+
+/**
+ * \brief CONNECT return codes.
  */
 typedef enum {
   CONN_ACCEPTED,
+  CONN_UNACCEPT_PROTO_VER,
   CONN_REF_IDENTIFIER_REJ,
   CONN_REF_SERVER_UNAVAIL,
   CONN_REF_BAD_USER_PASS,
   CONN_REF_NOT_AUTH,
   RESERVED
-} connect_state;
+} connect_return;
+
+/**
+ * \brief SUBACK return codes.
+ */
+typedef enum {
+    SUB_SUCCESS_MAX_QOS_0 = 0x00,
+    SUB_SUCCESS_MAX_QOS_1 = 0x01,
+    SUB_SUCCESS_MAX_QOS_2 = 0x02,
+    SUB_FAILURE           = 0x80,
+} suback_return;
 
 /**
  * \brief Struct to store utf-8 encoded strings, as required for text fields.
@@ -189,7 +212,7 @@ struct __attribute__((__packed__)) connect_variable_header {
   uint8_t reserved                : 1;
   uint8_t clean_session_flag      : 1;
   uint8_t will_flag               : 1;
-  uint8_t will_qos_flag           : 1;
+  uint8_t will_qos_flag           : 2;
   uint8_t will_retain_flag        : 1;
   uint8_t pass_flag               : 1;
   uint8_t user_flag               : 1;
@@ -306,6 +329,7 @@ void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
 uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len);
+uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str);
 uint8_t required_remaining_len_bytes(unsigned int len);
 
 void memmove_back(uint8_t *mem, size_t delta, size_t n);
