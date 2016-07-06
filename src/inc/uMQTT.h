@@ -33,6 +33,7 @@
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
 #define UMQTT_DEFAULT_QOS         0
 
+#define MQTT_MAX_FIXED_HDR_LENGTH 5
 #define UTF8_ENC_STR_MAX_LEN      65535
 /* Remaining length max bytes */
 #ifdef MICRO_CLIENT
@@ -323,7 +324,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
 umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len);
 size_t finalise_packet(struct mqtt_packet *pkt);
 void realign_packet(struct mqtt_packet *pkt);
-void disect_raw_packet(struct mqtt_packet *pkt);
+umqtt_ret disect_raw_packet(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);

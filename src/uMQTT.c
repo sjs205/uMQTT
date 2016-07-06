@@ -493,15 +493,16 @@ void realign_packet(struct mqtt_packet *pkt) {
  * \brief Function to disect incoming raw packet into struct mqtt_pkt
  * \param pkt The mxtt_packet to disect.
  */
-void disect_raw_packet(struct mqtt_packet *pkt) {
+umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
+  umqtt_ret ret = UMQTT_SUCCESS;
   log_stderr(LOG_DEBUG_FN, "fn: disect_raw_packet");
+
   /* assign fixed header */
   pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
 
   /* size of fixed header */
   pkt->len = decode_remaining_len(pkt);
-  pkt->fix_len =
-    1 + required_remaining_len_bytes(pkt->len);
+  pkt->fix_len = 1 + required_remaining_len_bytes(pkt->len);
 
   pkt->len += pkt->fix_len;
 
@@ -511,53 +512,105 @@ void disect_raw_packet(struct mqtt_packet *pkt) {
   switch (pkt->fixed->generic.type) {
     case CONNECT:
       pkt->var_len = sizeof(struct connect_variable_header);
+      /* validate reserved nibble */
+      if (pkt->fixed->generic.reserved != 0x0 ) {
+        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+            pkt->fixed->generic.reserved);
+        ret = UMQTT_PACKET_ERROR;
+      }
       break;
 
     case CONNACK:
-      pkt->var_len = sizeof(struct connect_variable_header);
+      pkt->var_len = sizeof(struct connack_variable_header);
+      /* validate reserved nibble */
+      if (pkt->fixed->generic.reserved != 0x0 ) {
+        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+            pkt->fixed->generic.reserved);
+        ret = UMQTT_PACKET_ERROR;
+      }
       break;
 
     case PUBLISH:
+      /* topic string length */
       pkt->var_len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
           | (pkt->variable->publish.topic.len_lsb));
 
-      /* utf8 encoded string len */ 
+      /* utf8 encoded string length */ 
       pkt->var_len += 2;
 
       if (pkt->fixed->publish.qos == QOS_AT_LEAST_ONCE ||
           pkt->fixed->publish.qos == QOS_EXACTLY_ONCE) {
-        /* pkt_id size */
-        pkt->var_len += sizeof(qos_t);
+        /* packet id length */
+        pkt->var_len += sizeof(uint16_t);
       }
       break;
 
     case PUBACK:
     case PUBCOMP:
-    case PUBREL:
     case PUBREC:
-    case SUBSCRIBE:
     case SUBACK:
     case UNSUBACK:
+      pkt->var_len = sizeof(struct generic_variable_header);
+      /* validate reserved nibble */
+      if (pkt->fixed->generic.reserved != 0x00 ) {
+        log_stderr(LOG_ERROR, "Malformed packet --- reserved nibble: 0x%X",
+            pkt->fixed->generic.reserved);
+        ret = UMQTT_PACKET_ERROR;
+      }
+      break;
+    case PUBREL:
+    case SUBSCRIBE:
     case UNSUBSCRIBE:
       pkt->var_len = sizeof(struct generic_variable_header);
+      /* validate reserved nibble */
+      if (pkt->fixed->generic.reserved != 0x2 ) {
+        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+            pkt->fixed->generic.reserved);
+        ret = UMQTT_PACKET_ERROR;
+      }
       break;
 
     case PINGREQ:
     case PINGRESP:
     case DISCONNECT:
       pkt->var_len = 0;
-
+      /* validate reserved nibble */
+      if (pkt->fixed->generic.reserved != 0x0 ) {
+        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+            pkt->fixed->generic.reserved);
+        ret = UMQTT_PACKET_ERROR;
+      }
       break;
 
     default:
-      log_stderr(LOG_ERROR, "Disect packet: MQTT packet type not supported: %s",
+      log_stderr(LOG_ERROR, "MQTT packet not supported: %s",
           pkt->fixed->generic.type);
+      ret = UMQTT_PKT_NOT_SUPPORTED;
   }
-  /* assign payload */
-  pkt->pay_len = pkt->len - (pkt->fix_len + pkt->var_len);
-  pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
-  return;
+  /* check fixed and variable header sizes */
+  if ((pkt->fix_len > sizeof(struct pkt_fixed_header)) ||
+      ((pkt->var_len) >= pkt->len)) {
+    log_stderr(LOG_ERROR, "Malformed packet, invalid length");
+    log_stderr(LOG_ERROR, "Packet length: %zu Fixed header length %zu"
+        " Variable header length: %zu Payload length: %zu",
+        pkt->len, pkt->fix_len, pkt->var_len, pkt->var_len);
+
+    pkt->pay_len = 0;
+    ret = UMQTT_PACKET_ERROR;
+
+  } else if ((pkt->var_len + pkt->fix_len) >= pkt->len) {
+    /* no space for a payload */
+    pkt->pay_len = 0;
+    pkt->payload = NULL;
+
+  } else {
+    /* assign payload */
+    pkt->pay_len = pkt->len - (pkt->fix_len + pkt->var_len);
+    pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
+  }
+
+  return ret;
 }
 
 /**
