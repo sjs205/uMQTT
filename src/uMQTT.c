@@ -738,7 +738,7 @@ uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str) {
   uint16_t len = 0;
   log_stderr(LOG_DEBUG_FN, "fn: decode_utf8_string");
 
-  len = (utf8_str->len_msb << 8) | utf8_str->len_lsb;
+  len = (uint16_t)(utf8_str->len_msb << 8) | utf8_str->len_lsb;
 
   if (len > 0xfffe) {
     log_stderr(LOG_ERROR, "Malformed UTF8 string");

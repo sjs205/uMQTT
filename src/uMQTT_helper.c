@@ -395,10 +395,10 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
           pkt->variable->generic.pkt_id);
 
       /* decode topic - NOTE: only single topic currently supported */
-      len = decode_utf8_string((char *)buf,
-          (struct utf8_enc_str *)&pkt->payload);
-      log_stdout(LOG_INFO, "TOPIC: %s", (char *)buf);
+      len = decode_utf8_string((char *)&buf,
+          (struct utf8_enc_str *)&pkt->payload->data);
 
+      log_stdout(LOG_INFO, "TOPIC: %s", buf);
       log_stdout(LOG_INFO, "  (QoS: %s)",
           get_qos_string((qos_t )*(&pkt->payload->data + len + 2)));
 
