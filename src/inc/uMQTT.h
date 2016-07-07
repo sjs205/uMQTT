@@ -69,6 +69,7 @@ typedef enum {
   UMQTT_PACKET_ERROR,
   UMQTT_PAYLOAD_ERROR,
   UMQTT_PKT_NOT_SUPPORTED,
+  UMQTT_FILE_ERROR,
 } umqtt_ret;
 
 /**

@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <getopt.h>
 
@@ -34,6 +35,9 @@
 #include "../inc/log.h"
 
 #define MAX_PACKET_SIZE_BYTES     65536
+
+#define UMQTT_MAX_FILENAME_LEN    1024      /* 1KB */
+#define UMQTT_MAX_FILE_SIZE       16384     /* 16KB */
 #define UMQTT_TEST_PACKET_HEX     \
   "301c000d754d5154545f436f6e74696b6948656c6c6f20576f726c642100"
 
@@ -99,6 +103,7 @@ size_t hex_str_to_uint(char *in, size_t len, uint8_t *out) {
   uint8_t lnibble = 0;
   uint8_t hnibble = 0;
 
+  log_stderr(LOG_DEBUG, "Converting HEX string of %zu bytes:\n%s", len, in);
   if (len  % 2 == 0) {
     for (count = 0; count < len && (count / 2) < nibbles; count += 2) {
 
@@ -179,21 +184,60 @@ size_t hex_char_to_uint_utest() {
 umqtt_ret file_read_contents(const char *filename, uint8_t *buf, size_t *len) {
 
   umqtt_ret ret = UMQTT_SUCCESS;
+  ssize_t rlen, b_ptr = 0;
+  char *line = NULL;
+  size_t llen = 0;
 
   FILE *f = fopen(filename, "rb");
+  if (!f) {
+    log_stderr(LOG_ERROR, "Failed to open file: %s - %s", filename,
+        strerror(errno));
+    return UMQTT_FILE_ERROR;
+  }
+
   fseek(f, 0, SEEK_END);
   size_t fsize = ftell(f);
   fseek(f, 0, SEEK_SET);
 
   if (fsize > *len) {
-    log_stderr(LOG_ERROR, "The file (%zu bytes) is larger than buffer (%zu bytes)",
+    log_stderr(LOG_ERROR, "The file size (%zu) is larger than buffer size (%zu)",
         fsize, *len);
-    fclose(f);
     ret = UMQTT_PAYLOAD_ERROR;
   } else {
-    *len = fread(buf, 1, fsize, f);
-    fclose(f);
+    while ((rlen = getline(&line, &llen, f)) != -1) {
+
+      if (rlen > 0) {
+
+        if (line[0] == '#') {
+          /* comment - ignore */
+          log_stderr(LOG_DEBUG, "Ignoring comment: %s", line);
+          continue;
+        }
+
+        if (line[0] == 0x0A) {
+          /* newline - ignore */
+          log_stderr(LOG_DEBUG, "Ignoring newline");
+          continue;
+        }
+
+        log_stderr(LOG_DEBUG, "Retrieved line of length %zu", rlen);
+        memcpy(buf + b_ptr, line, rlen);
+        b_ptr += rlen ;
+
+        if (b_ptr >= *len) {
+          log_stderr(LOG_DEBUG, "File buffer full: %zu bytes", *len);
+          ret = UMQTT_ERROR;
+          break;
+        }
+      }
+    }
+    log_stderr(LOG_DEBUG, "File buffer used: %zu of %zu bytes", b_ptr, *len);
+    log_stderr(LOG_DEBUG, "Buffer:\n%s\n", buf);
+    free(line);
+    *len = b_ptr;
+
   }
+  fclose(f);
 
   return ret;
 }
@@ -203,7 +247,9 @@ int main(int argc, char **argv) {
   umqtt_ret ret = UMQTT_SUCCESS;
   int c, option_index = 0;
   uint8_t cl_pkt = 0;
-  char filename[1024] = "\0";
+  char filename[UMQTT_MAX_FILENAME_LEN] = "\0";
+  size_t file_len = UMQTT_MAX_FILE_SIZE;
+  uint8_t file_buf[UMQTT_MAX_FILE_SIZE] = "\0";
   uint8_t pkt_buf[MAX_PACKET_SIZE_BYTES] = {0};
 
   struct mqtt_packet *pkt = NULL;
@@ -301,23 +347,67 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (!cl_pkt) {
-    log_stderr(LOG_ERROR, "The packet is missing");
+  if ((!cl_pkt && !*filename) || (cl_pkt && *filename)) {
+    log_stderr(LOG_ERROR,
+        "Must specify either a filename or a packet, not both");
     ret = UMQTT_ERROR;
+    print_usage();
     goto cleanup;
   }
 
-  /* process hex packet - need to add binary input */
-  pkt->raw.len = hex_str_to_uint((char *)pkt_buf, strlen((const char *)pkt_buf),
-          pkt->raw.buf);
+  if (*filename) {
+    log_stdout(LOG_INFO, "Reading packets from file: %s", filename);
+    ret = file_read_contents(filename, file_buf, &file_len);
+    if (ret) {
+      log_stderr(LOG_ERROR, "Could not read file");
+      goto cleanup;
+    }
 
-  ret = disect_raw_packet(pkt);
-  if (ret) {
-    log_stderr(LOG_ERROR, "Failed to decode %s packet.",
-        get_type_string(pkt->fixed->generic.type));
+    /* disect buffer */
+    uint8_t *line = file_buf;
+    uint8_t *eol = NULL;
+    size_t len = 0;
+    while ((eol = (uint8_t *)strchr((char *)line, 0x0A))) {
+      /* copy line to buffer */
+
+      /* get line length */
+      len = eol - line;
+
+      /* set NULL terminatinf string */
+      *eol = '\0';
+
+      /* should be a newline */
+      pkt->raw.len = hex_str_to_uint((char *)line, len, pkt->raw.buf);
+
+      /* update index */
+      line = eol + 1;
+
+      /* print packet */
+      ret = disect_raw_packet(pkt);
+      if (ret) {
+        log_stderr(LOG_ERROR, "Failed to decode %s packet.",
+            get_type_string(pkt->fixed->generic.type));
+      } else {
+        print_packet_detailed(pkt);
+        print_packet_hex_debug(pkt);
+      }
+    }
   } else {
-    print_packet_detailed(pkt);
-    print_packet_hex_debug(pkt);
+    /* expect packet in -p argument */
+
+
+    /* process hex packet - need to add binary input */
+    pkt->raw.len = hex_str_to_uint((char *)pkt_buf,
+        strlen((const char *)pkt_buf), pkt->raw.buf);
+
+    ret = disect_raw_packet(pkt);
+    if (ret) {
+      log_stderr(LOG_ERROR, "Failed to decode %s packet.",
+          get_type_string(pkt->fixed->generic.type));
+    } else {
+      print_packet_detailed(pkt);
+      print_packet_hex_debug(pkt);
+    }
   }
 
 cleanup:
