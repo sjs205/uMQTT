@@ -47,6 +47,7 @@ void print_struct_sizes() {
   log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_publish_fixed_header): \t%zu bytes",
       sizeof(struct pkt_publish_fixed_header));
   log_stdout(LOG_INFO, "\t}");
+
   log_stdout(LOG_INFO, "\tsizeof(struct pkt_variable_header): \t\t\t%zu bytes",
       sizeof(struct pkt_variable_header));
   log_stdout(LOG_INFO, "\t{");
@@ -63,6 +64,30 @@ void print_struct_sizes() {
       sizeof(struct pkt_payload));
   log_stdout(LOG_INFO, "\n\tsizeof(struct raw_pkt): \t\t\t\t%zu bytes",
       sizeof(struct raw_pkt));
+
+  log_stdout(LOG_INFO, "\n\tsizeof(size_t fix_len): \t\t\t\t%zu bytes",
+      sizeof(size_t));
+  log_stdout(LOG_INFO, "\tsizeof(size_t var_len): \t\t\t\t%zu bytes",
+      sizeof(size_t));
+  log_stdout(LOG_INFO, "\tsizeof(size_t pay_len): \t\t\t\t%zu bytes",
+      sizeof(size_t));
+  log_stdout(LOG_INFO, "\tsizeof(size_t len):     \t\t\t\t%zu bytes\n",
+      sizeof(size_t));
+
+  log_stdout(LOG_INFO, "\tsizeof(struct pkt_payload_ptr): \t\t\t%zu bytes",
+      sizeof(struct pkt_variable_header));
+  log_stdout(LOG_INFO, "\t{");
+  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_connect_payload): \t\t%zu bytes",
+      sizeof(struct pkt_connect_payload));
+  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_publish_payload): \t\t%zu bytes",
+      sizeof(struct pkt_publish_payload));
+  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_subscribe_payload): \t\t%zu bytes",
+      sizeof(struct pkt_subscribe_payload));
+  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_suback_payload): \t\t%zu bytes",
+      sizeof(struct pkt_suback_payload));
+  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_unsubscribe_payload): \t%zu bytes",
+      sizeof(struct pkt_unsubscribe_payload));
+  log_stdout(LOG_INFO, "\t}");
 
   log_stdout(LOG_INFO, "}");
   log_stdout(LOG_INFO, "\n\nsizeof(struct utf8_enc_str): \t\t\t\t\t%zu bytes",

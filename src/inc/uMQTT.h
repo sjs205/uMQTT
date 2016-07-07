@@ -178,7 +178,7 @@ struct __attribute__((__packed__)) pkt_publish_fixed_header {
 
 /**
  * \brief Struct to store the fixed header of a control packet.
- * \param generic igeneric fixed header
+ * \param generic generic fixed header
  * \param publish PUBLISH fixed header
  * \param remain_length The remaining length of the packet not including
  *                   the fixed header - note, currently, only 127 bytes
@@ -250,6 +250,13 @@ struct generic_variable_header {
   uint16_t pkt_id                 : 16;
 };
 
+/**
+ * \brief Struct to store the variable header of a control packet.
+ * \param generic generic variable header
+ * \param connect CONNECT variable header
+ * \param connack CONNACK variable header
+ * \param publish PUBLISH variable header
+ */
 struct pkt_variable_header {
   union {
     struct generic_variable_header generic;
@@ -260,11 +267,77 @@ struct pkt_variable_header {
 };
 
 /**
+ * \brief Struct to store the CONNECT control packet payload pointers.
+ * \param clientId The connection clientId.
+ * \param will_topic The connections will topic.
+ * \param will_message The connections will message.
+ * \param user_name The connection user name.
+ * \param password The connection password.
+ */
+struct pkt_connect_payload {
+    struct utf8_enc_str *clientId;
+    struct utf8_enc_str *will_topic;
+    struct utf8_enc_str *will_message;
+    struct utf8_enc_str *user_name;
+    struct utf8_enc_str *password;
+};
+
+/**
+ * \brief Struct to store the PUBLISH control packet payload pointers.
+ * \param message The PUBLISH packet message.
+ */
+struct pkt_publish_payload {
+    struct utf8_enc_str *message;
+};
+
+/**
+ * \brief Struct to store the SUBSCRIBE control packet payload pointers.
+ * \param topic_filter Pointer to the SUBSCRIBE topic filter.
+ * \param qos Pointer to the requested QoS for the topic filter.
+ * \param next_topic_filter Pointer to the SUBSCRIBE next topic filter,
+ *        should be set to NULL if there is no next topic.
+ */
+struct pkt_subscribe_payload {
+    struct utf8_enc_str *topic_filter;
+    qos_t *qos;
+    struct utf8_enc_str *next_topic_filter;
+};
+
+/**
+ * \brief Struct to store the SUBACK control packet payload pointers.
+ * \param return_code Pointer to the subscribe return code.
+ */
+struct pkt_suback_payload {
+    uint8_t *return_code;
+};
+
+/**
+ * \brief Struct to store the UNSUBSCRIBE control packet payload pointers.
+ * \param topic_filter Pointer to the UNSUBSCRIBE topic filter.
+ * \param next_topic_filter Pointer to the UNSUBSCRIBE next topic filter,
+ *        should be set to NULL if there is no next topic.
+ */
+struct pkt_unsubscribe_payload {
+    struct utf8_enc_str *topic_filter;
+    struct utf8_enc_str *next_topic_filter;
+};
+
+struct pkt_payload_ptrs {
+  union {
+    struct pkt_connect_payload connect;
+    struct pkt_publish_payload publish;
+    struct pkt_subscribe_payload subscribe;
+    struct pkt_suback_payload suback;
+    struct pkt_unsubscribe_payload unsubscribe;
+  };
+};
+
+/**
  * \brief Struct to store the control packet payload.
  * \param data The raw payload data.
  */
 struct pkt_payload {
-  uint8_t data;
+    uint8_t data;
 };
 
 /**
@@ -298,6 +371,9 @@ struct mqtt_packet {
   size_t var_len;
   size_t pay_len;
   size_t len;
+
+  struct pkt_payload_ptrs payload_p;
+
 };
 
 /*
