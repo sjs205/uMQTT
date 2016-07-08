@@ -490,6 +490,98 @@ void realign_packet(struct mqtt_packet *pkt) {
 }
 
 /**
+ * \brief Function to disect raw payload into pkt_payload_ptrs struct
+ * \param pkt The mxtt_packet to disect.
+ */
+umqtt_ret disect_raw_payload(struct mqtt_packet *pkt) {
+  log_stderr(LOG_DEBUG_FN, "fn: disect_raw_payload");
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+  size_t padding = 0;
+  switch (pkt->fixed->generic.type) {
+    case CONNECT:
+      /* clientId */
+      pkt->payload_p.connect.clientId = (struct utf8_enc_str *)pkt->payload;
+      padding += utf8_enc_str_size(pkt->payload_p.connect.clientId);
+
+      if (pkt->variable->connect.will_flag) {
+        /* will topic */
+        pkt->payload_p.connect.will_topic =
+          (struct utf8_enc_str *)(&pkt->payload->data + padding);
+        padding += utf8_enc_str_size(pkt->payload_p.connect.will_topic);
+        /* will message */
+        pkt->payload_p.connect.will_message =
+          (struct utf8_enc_str *)(&pkt->payload->data + padding);
+        padding += utf8_enc_str_size(pkt->payload_p.connect.will_message);
+      }
+      if (pkt->variable->connect.user_flag) {
+        /* username */
+        pkt->payload_p.connect.user_name =
+          (struct utf8_enc_str *)(&pkt->payload->data + padding);
+        padding += utf8_enc_str_size(pkt->payload_p.connect.user_name);
+      }
+      if (pkt->variable->connect.pass_flag) {
+        /* password */
+        pkt->payload_p.connect.password =
+          (struct utf8_enc_str *)(&pkt->payload->data + padding);
+      }
+      break;
+
+    case PUBLISH:
+      /* message */
+      pkt->payload_p.publish.message =
+        (struct utf8_enc_str *)(&pkt->payload->data);
+      break;
+
+    case SUBSCRIBE:
+      /* topic filter */
+      pkt->payload_p.subscribe.topic_filter =
+        (struct utf8_enc_str *)(&pkt->payload->data);
+      padding += utf8_enc_str_size(pkt->payload_p.subscribe.topic_filter);
+      /* topic QoS */
+      pkt->payload_p.subscribe.qos =
+        (qos_t *)(&pkt->payload->data + padding);
+      padding += sizeof(qos_t);
+
+      if (padding < pkt->pay_len) {
+        /* next topic filter */
+        pkt->payload_p.subscribe.next_topic_filter =
+          (struct utf8_enc_str *)(&pkt->payload->data + padding);
+      }
+      break;
+
+    case SUBACK:
+      /* subscribe return code */
+      pkt->payload_p.suback.return_code =
+        (uint8_t *)(&pkt->payload->data);
+      break;
+
+    case UNSUBSCRIBE:
+      /* topic filter */
+      pkt->payload_p.unsubscribe.topic_filter =
+        (struct utf8_enc_str *)(&pkt->payload->data);
+      padding += utf8_enc_str_size(pkt->payload_p.unsubscribe.topic_filter);
+
+      if (padding < pkt->pay_len) {
+        /* next topic filter */
+        pkt->payload_p.unsubscribe.next_topic_filter =
+          (struct utf8_enc_str *)(&pkt->payload->data + padding);
+      }
+      break;
+
+    default:
+      /* packet does not contain a payload */
+      break;
+  }
+  if (padding > pkt->pay_len) {
+    log_stderr(LOG_ERROR, "Malformed packet - payload larger than length");
+    ret = UMQTT_PACKET_ERROR;
+  }
+
+  return ret;
+}
+
+/**
  * \brief Function to disect incoming raw packet into struct mqtt_pkt
  * \param pkt The mxtt_packet to disect.
  */
@@ -607,7 +699,11 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
   } else {
     /* assign payload */
     pkt->pay_len = pkt->len - (pkt->fix_len + pkt->var_len);
-    pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
+    if (pkt->pay_len) {
+      pkt->payload =
+        (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
+      ret = disect_raw_payload(pkt);
+    }
   }
 
   return ret;
@@ -749,6 +845,18 @@ uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str) {
   buf[len] = '\0';
 
   return len;
+}
+
+/**
+ * \brief Function to return the size of a utf8 encoded string,
+ *        i.e., inc len bytes.
+ * \param utf8 Pointer to the utf8 encoded to be sized.
+ */
+uint16_t utf8_enc_str_size(struct utf8_enc_str *utf8) {
+
+  /* string length + size of length MSB & LSB */
+  return (uint16_t)(((utf8->len_msb << 8) | utf8->len_lsb)
+        + sizeof(uint16_t));
 }
 
 /**

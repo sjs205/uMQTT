@@ -402,9 +402,11 @@ umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len);
 size_t finalise_packet(struct mqtt_packet *pkt);
 void realign_packet(struct mqtt_packet *pkt);
 umqtt_ret disect_raw_packet(struct mqtt_packet *pkt);
+umqtt_ret disect_raw_payload(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
+uint16_t utf8_enc_str_size(struct utf8_enc_str *utf8);
 uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len);
 uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str);
