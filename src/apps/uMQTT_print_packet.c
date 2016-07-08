@@ -39,7 +39,9 @@
 #define UMQTT_MAX_FILENAME_LEN    1024      /* 1KB */
 #define UMQTT_MAX_FILE_SIZE       16384     /* 16KB */
 #define UMQTT_TEST_PACKET_HEX     \
-  "301c000d754d5154545f436f6e74696b6948656c6c6f20576f726c642100"
+  "301C00167361626174696E692F646174692F7069312F40612F3135382E35"
+#define UMQTT_TEST_PACKET_HEX_UNSANATISED     \
+  "0x30 0x1C 0x00 0x16 0x73 0x61 0x62 0x61 0x74 0x69 0x6E 0x69 0x2F 0x64 0x61 0x74 0x69 0x2F 0x70 0x69 0x31 0x2F 0x40 0x61 0x2F 0x31 0x35 0x38 0x2E 0x35 "
 
 /*
  * \brief function to print help
@@ -78,6 +80,69 @@ static int print_usage() {
   return 0;
 }
 
+void sanatise_hex_input(char *in, size_t *len) {
+  char *buf = in;
+  size_t olen = *len;
+
+  /* remove spaces */
+  while((buf = strstr(buf ," "))) {
+    memmove(buf, buf + 1, 1 + strlen(buf + 1));
+  }
+
+  *len = strlen(in);
+  if (olen != *len) {
+    log_stderr(LOG_DEBUG, "Removed %zu spaces from string", olen - *len);
+    olen = *len;
+  }
+  buf = in;
+
+  /* remove "0x*/
+  while((buf = strstr(buf ,"0x"))) {
+    memmove(buf, buf + 2, 1 + strlen(buf + 2));
+  }
+
+  *len = strlen(in);
+  if (olen != *len) {
+    log_stderr(LOG_DEBUG, "Removed %zu instances of '0x' from string",
+        olen - *len);
+    log_stderr(LOG_DEBUG, "New string length: %zu", *len);
+  }
+
+  return;
+}
+
+umqtt_ret sanatise_hex_input_utest() {
+  umqtt_ret ret = UMQTT_SUCCESS;
+  size_t len = sizeof(UMQTT_TEST_PACKET_HEX_UNSANATISED);
+  char in[sizeof(UMQTT_TEST_PACKET_HEX_UNSANATISED)] =
+    UMQTT_TEST_PACKET_HEX_UNSANATISED;
+
+  log_stdout(LOG_INFO, "\nSanatise Hex string to uint array conversion test");
+  log_stdout(LOG_INFO, "Hex string of %zu bytes in:\n%s", len, in);
+  sanatise_hex_input(in, &len);
+  log_stdout(LOG_INFO, "\nHex string of %zu bytes out:\n%s", len, in);
+
+  if (len == (sizeof(UMQTT_TEST_PACKET_HEX) - 1)) {
+    log_stdout(LOG_INFO, "PASSED: sanatisation length test:");
+
+  } else {
+    log_stderr(LOG_ERROR, "FAILED: sanatisation length test:");
+    ret = UMQTT_ERROR;
+  }
+  log_stdout(LOG_INFO, "   original sizeof(in): %zu, new sizeof(out): %zu",
+      sizeof(UMQTT_TEST_PACKET_HEX_UNSANATISED) - 1, len);
+
+  if (!strcmp(in, UMQTT_TEST_PACKET_HEX)) {
+    log_stdout(LOG_INFO, "PASSED: sanatisation output string correct");
+
+  } else {
+    log_stderr(LOG_ERROR, "FAILED: sanatisation output string incorrect");
+    ret = UMQTT_ERROR;
+  }
+
+  return ret;
+}
+
 umqtt_ret hex_char_to_uint(char *in, uint8_t *out) {
   if (in) {
     *in = toupper((int)*in);
@@ -103,6 +168,8 @@ size_t hex_str_to_uint(char *in, size_t len, uint8_t *out) {
   uint8_t lnibble = 0;
   uint8_t hnibble = 0;
 
+  sanatise_hex_input(in, &len);
+
   log_stderr(LOG_DEBUG, "Converting HEX string of %zu bytes:\n%s", len, in);
   if (len  % 2 == 0) {
     for (count = 0; count < len && (count / 2) < nibbles; count += 2) {
@@ -125,7 +192,7 @@ size_t hex_str_to_uint(char *in, size_t len, uint8_t *out) {
 }
 
 umqtt_ret hex_str_to_uint_utest() {
-  umqtt_ret ret;
+  umqtt_ret ret = UMQTT_SUCCESS;
   char in[sizeof(UMQTT_TEST_PACKET_HEX)] = UMQTT_TEST_PACKET_HEX;
   uint8_t out[sizeof(UMQTT_TEST_PACKET_HEX) / 2] = {0};
 
@@ -137,7 +204,6 @@ umqtt_ret hex_str_to_uint_utest() {
     log_stdout(LOG_INFO, "   sizeof(in): %zu, sizeof(out): %zu, (in/out) = 2",
         sizeof(UMQTT_TEST_PACKET_HEX) - 1, len);
 
-    ret = UMQTT_SUCCESS;
   } else {
     log_stderr(LOG_ERROR, "FAILED: Output array length test:");
     log_stderr(LOG_ERROR, "   sizeof(in): %zu, sizeof(out): %zu, (in/out) != 2",
@@ -336,6 +402,7 @@ int main(int argc, char **argv) {
           ret = hex_char_to_uint_utest();
           ret = hex_str_to_uint_utest();
 
+          sanatise_hex_input_utest();
           goto cleanup;
 
           break;
