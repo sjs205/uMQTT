@@ -34,6 +34,7 @@
 #define UMQTT_DEFAULT_QOS         0
 
 #define MQTT_MAX_FIXED_HDR_LENGTH 5
+#define MQTT_CLIENTID_MAX_LEN     23
 #define UTF8_ENC_STR_MAX_LEN      65535
 /* Remaining length max bytes */
 #ifdef MICRO_CLIENT
@@ -195,29 +196,37 @@ struct __attribute__((__packed__)) pkt_fixed_header {
 };
 
 /**
- * \brief Struct to store the variable header of a CONNECT control packet.
- * \param name_len The length of the name field.
- * \param proto_name The name of the protocol, "MQTT".
- * \param proto_level The version of the protocol.
+ * \brief Struct to store the CONNECT control packet flags.
  * \param user_flag Flag indicating whether username is present.
  * \param pass_flag Flag indicating whether password is present.
  * \param vill_retain_flag Flag indicating will retian.
  * \param vill_qos_flag Flag indicating will quality of service.
  * \param vill_flag Flag indicating will.
  * \param clean_session_flag Flag indicating whether clean session is active.
+ */
+struct __attribute__((__packed__)) connect_flags {
+  uint8_t reserved                : 1;
+  uint8_t clean_session_flag      : 1;
+  uint8_t will_flag               : 1;
+  uint8_t will_qos                : 2;
+  uint8_t will_retain_flag        : 1;
+  uint8_t pass_flag               : 1;
+  uint8_t user_flag               : 1;
+};
+
+/**
+ * \brief Struct to store the variable header of a CONNECT control packet.
+ * \param name_len The length of the name field.
+ * \param proto_name The name of the protocol, "MQTT".
+ * \param proto_level The version of the protocol.
+ * \param flags The CONNECT packet flags.
  * \param keep_alive Number of seconds a session should be kept alive.
  */
 struct __attribute__((__packed__)) connect_variable_header {
   uint16_t name_len               : 16;
   uint8_t proto_name[4];
   uint8_t proto_level;
-  uint8_t reserved                : 1;
-  uint8_t clean_session_flag      : 1;
-  uint8_t will_flag               : 1;
-  uint8_t will_qos_flag           : 2;
-  uint8_t will_retain_flag        : 1;
-  uint8_t pass_flag               : 1;
-  uint8_t user_flag               : 1;
+  struct connect_flags flags;
   uint16_t keep_alive             :16;
 };
 

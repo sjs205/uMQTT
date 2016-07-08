@@ -184,6 +184,7 @@ char *get_suback_return_string(suback_return sret) {
   return ret;
 
 }
+
 /**
  * \brief Function to return the QoS string.
  * \param type The QoS string to return.
@@ -300,25 +301,31 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
       log_stdout(LOG_INFO, "Protocol version: %s",
           get_proto_ver_string(pkt->variable->connect.proto_level));
 
-      if (pkt->variable->connect.user_flag) {
-        log_stderr(LOG_DEBUG, "Username flag set:");
+      /* length used later */
+      len = decode_utf8_string((char *)buf,
+          (struct utf8_enc_str *)&pkt->payload->data);
+      log_stdout(LOG_INFO, "ClientId: %s", buf);
+
+      if (pkt->variable->connect.flags.user_flag) {
+        log_stdout(LOG_INFO, "Username flag set:");
         /* get username from payload 
            log_stderr(LOG_DEBUG, "  Username"); */
       }
 
-      if (pkt->variable->connect.pass_flag) {
-        log_stderr(LOG_DEBUG, "Pass flag set:");
+      if (pkt->variable->connect.flags.pass_flag) {
+        log_stdout(LOG_INFO, "Pass flag set:");
         /* get password from payload 
            log_stderr(LOG_DEBUG, "  Password"); */
       }
 
-      if (pkt->variable->connect.will_flag) {
-        log_stderr(LOG_DEBUG, "Will topic flag set:");
+      if (pkt->variable->connect.flags.will_flag) {
+        log_stdout(LOG_INFO, "Will flag set:");
         log_stdout(LOG_INFO, "  Will QoS:");
-        log_stdout(LOG_INFO, "    %d - %s", pkt->variable->connect.will_qos_flag,
-            get_qos_string(pkt->variable->connect.will_qos_flag));
+        log_stdout(LOG_INFO, "    %d - %s",
+            pkt->variable->connect.flags.will_qos,
+            get_qos_string(pkt->variable->connect.flags.will_qos));
 
-        if (pkt->variable->connect.will_retain_flag) {
+        if (pkt->variable->connect.flags.will_retain_flag) {
           log_stdout(LOG_INFO, "Will Retain flag set.");
         }
         /* get will topic and will message from payload  */
@@ -326,13 +333,15 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
         log_stdout(LOG_INFO, "  Will Message:\n");
       }
 
-      if (pkt->variable->connect.clean_session_flag) {
-        log_stderr(LOG_DEBUG, "Clean Session flag set");
+      if (pkt->variable->connect.flags.clean_session_flag) {
+        log_stdout(LOG_INFO, "Clean Session flag set");
       }
 
       if (pkt->variable->connect.keep_alive) {
-        log_stderr(LOG_DEBUG, "Keep Alive set to: %d",
+        log_stdout(LOG_INFO, "Keep alive timer set to: %ds",
             pkt->variable->connect.keep_alive);
+      } else {
+        log_stdout(LOG_INFO, "Keep alive timer off");
       }
       break;
 

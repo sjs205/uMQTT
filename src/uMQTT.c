@@ -114,7 +114,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       pkt->variable->connect.name_len = (0x04>>8) | (0x04<<8);
       memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
       pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
-      pkt->variable->connect.clean_session_flag |= 1;
+      pkt->variable->connect.flags.clean_session_flag |= 1;
 
       break;
 
@@ -161,7 +161,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
  * \param dup The duplicate flag.
  */
 umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
-    uint8_t qos, uint8_t dup) {
+    qos_t qos, uint8_t dup) {
   log_stderr(LOG_DEBUG_FN, "fn: set_publish_fixed_flags");
   if (pkt) {
     if (retain) {
@@ -504,7 +504,7 @@ umqtt_ret disect_raw_payload(struct mqtt_packet *pkt) {
       pkt->payload_p.connect.clientId = (struct utf8_enc_str *)pkt->payload;
       padding += utf8_enc_str_size(pkt->payload_p.connect.clientId);
 
-      if (pkt->variable->connect.will_flag) {
+      if (pkt->variable->connect.flags.will_flag) {
         /* will topic */
         pkt->payload_p.connect.will_topic =
           (struct utf8_enc_str *)(&pkt->payload->data + padding);
@@ -514,13 +514,13 @@ umqtt_ret disect_raw_payload(struct mqtt_packet *pkt) {
           (struct utf8_enc_str *)(&pkt->payload->data + padding);
         padding += utf8_enc_str_size(pkt->payload_p.connect.will_message);
       }
-      if (pkt->variable->connect.user_flag) {
+      if (pkt->variable->connect.flags.user_flag) {
         /* username */
         pkt->payload_p.connect.user_name =
           (struct utf8_enc_str *)(&pkt->payload->data + padding);
         padding += utf8_enc_str_size(pkt->payload_p.connect.user_name);
       }
-      if (pkt->variable->connect.pass_flag) {
+      if (pkt->variable->connect.flags.pass_flag) {
         /* password */
         pkt->payload_p.connect.password =
           (struct utf8_enc_str *)(&pkt->payload->data + padding);
