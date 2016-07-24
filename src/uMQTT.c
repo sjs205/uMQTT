@@ -454,15 +454,10 @@ umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
         (struct utf8_enc_str *)&pkt->payload->data, clientid, strlen(clientid));
   }
 
-  /* setup pointer to struct */
-  pkt->payload_p.connect.clientId = (struct utf8_enc_str *)&pkt->payload->data;
-
   /* set last will */
   if (pkt->variable->connect.flags.will_flag) {
 
     /* will topic */
-    pkt->payload_p.connect.will_topic =
-      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
     if (topic) {
       pkt->pay_len += encode_utf8_string(
           (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len),
@@ -470,8 +465,6 @@ umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
     }
 
     /* will message */
-    pkt->payload_p.connect.will_message =
-      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
     if (message) {
       pkt->pay_len += encode_utf8_string(
           (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), message,
@@ -480,25 +473,17 @@ umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
   }
 
   /* set username */
-  if (pkt->variable->connect.flags.user_flag) {
-    pkt->payload_p.connect.user_name =
-      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
-    if (username) {
-      pkt->pay_len += encode_utf8_string(
-          (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), username,
-          strlen(username));
-    }
+  if (username) {
+    pkt->pay_len += encode_utf8_string(
+        (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), username,
+        strlen(username));
   }
 
   /* set password */
-  if (pkt->variable->connect.flags.pass_flag) {
-    pkt->payload_p.connect.password =
-      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
-    if (password) {
-      pkt->pay_len += encode_utf8_string(
-          (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), password,
-          strlen(password));
-    }
+  if (password) {
+    pkt->pay_len += encode_utf8_string(
+        (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), password,
+        strlen(password));
   }
 
   /* recalculate pay->len */
@@ -673,100 +658,6 @@ void realign_packet(struct mqtt_packet *pkt) {
 }
 
 /**
- * \brief Function to disect raw payload into pkt_payload_ptrs struct
- * \param pkt The mxtt_packet to disect.
- */
-umqtt_ret disect_raw_payload(struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: disect_raw_payload");
-
-  umqtt_ret ret = UMQTT_SUCCESS;
-  size_t padding = 0;
-  switch (pkt->fixed->generic.type) {
-    case CONNECT:
-      /* clientId */
-      pkt->payload_p.connect.clientId = (struct utf8_enc_str *)pkt->payload;
-      padding += utf8_enc_str_size(pkt->payload_p.connect.clientId);
-
-      if (pkt->variable->connect.flags.will_flag) {
-        /* will topic */
-        pkt->payload_p.connect.will_topic =
-          (struct utf8_enc_str *)(&pkt->payload->data + padding);
-        padding += utf8_enc_str_size(pkt->payload_p.connect.will_topic);
-        /* will message */
-        pkt->payload_p.connect.will_message =
-          (struct utf8_enc_str *)(&pkt->payload->data + padding);
-        padding += utf8_enc_str_size(pkt->payload_p.connect.will_message);
-      }
-      if (pkt->variable->connect.flags.user_flag) {
-        /* username */
-        pkt->payload_p.connect.user_name =
-          (struct utf8_enc_str *)(&pkt->payload->data + padding);
-        padding += utf8_enc_str_size(pkt->payload_p.connect.user_name);
-      }
-      if (pkt->variable->connect.flags.pass_flag) {
-        /* password */
-        pkt->payload_p.connect.password =
-          (struct utf8_enc_str *)(&pkt->payload->data + padding);
-      }
-      break;
-
-    case PUBLISH:
-      /* message */
-      pkt->payload_p.publish.message =
-        (struct utf8_enc_str *)(&pkt->payload->data);
-      break;
-
-    case SUBSCRIBE:
-      /* topic filter */
-      pkt->payload_p.subscribe.topic_filter =
-        (struct utf8_enc_str *)(&pkt->payload->data);
-      padding += utf8_enc_str_size(pkt->payload_p.subscribe.topic_filter);
-      /* topic QoS */
-      pkt->payload_p.subscribe.qos =
-        (qos_t *)(&pkt->payload->data + padding);
-      padding += sizeof(qos_t);
-
-      if (padding < pkt->pay_len) {
-        /* next topic filter */
-        pkt->payload_p.subscribe.next_topic_filter =
-          (struct utf8_enc_str *)(&pkt->payload->data + padding);
-      }
-      break;
-
-    case SUBACK:
-      /* subscribe return code */
-      pkt->payload_p.suback.return_code =
-        (uint8_t *)(&pkt->payload->data);
-      break;
-
-    case UNSUBSCRIBE:
-      /* topic filter */
-      pkt->payload_p.unsubscribe.topic_filter =
-        (struct utf8_enc_str *)(&pkt->payload->data);
-      padding += utf8_enc_str_size(pkt->payload_p.unsubscribe.topic_filter);
-
-      if (padding < pkt->pay_len) {
-        /* next topic filter */
-        pkt->payload_p.unsubscribe.next_topic_filter =
-          (struct utf8_enc_str *)(&pkt->payload->data + padding);
-      }
-      break;
-
-    default:
-      /* packet does not contain a payload */
-      break;
-  }
-  if (padding > pkt->pay_len) {
-    log_stderr(LOG_ERROR, "Malformed packet - payload larger than length");
-    log_stderr(LOG_DEBUG, "Lengths: payload: %zu, padding: %zu", pkt->pay_len,
-        padding);
-    ret = UMQTT_PACKET_ERROR;
-  }
-
-  return ret;
-}
-
-/**
  * \brief Function to disect incoming raw packet into struct mqtt_pkt
  * \param pkt The mxtt_packet to disect.
  */
@@ -887,7 +778,6 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
     if (pkt->pay_len) {
       pkt->payload =
         (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
-      ret = disect_raw_payload(pkt);
     }
   }
 
