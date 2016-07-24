@@ -195,6 +195,30 @@ void log_stderr(log_level_t level, const char *format, ...) {
 }
 
 /*
+ * \brief function to print log messages, the file the messages
+ *          are printed to depends on the level.
+ * \param level the log level of the message to be logged
+ * \param format String to be logged
+ * \param ... additional arguments for format
+ */
+void log_std(log_level_t level, const char *format, ...) {
+
+  va_list args;
+
+  va_start(args, format);
+
+  if (log_level(0) == LOG_INFO) {
+    log_stdout_args(level, format, args);
+  } else {
+    log_stderr_args(level, format, args);
+  }
+
+  va_end(args);
+
+  return;
+}
+
+/*
  * \brief function to print log section to fd
  * \param level the log level of the message to be logged
  * \param format String to be logged

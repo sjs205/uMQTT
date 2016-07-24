@@ -41,5 +41,6 @@ log_level_t log_level(log_level_t level);
 log_level_t set_log_level_str(char *level);
 void log_stdout(log_level_t level, const char *format, ...);
 void log_stderr(log_level_t level, const char *format, ...);
+void log_std(log_level_t level, const char *format, ...);
 void log_section(log_level_t level, FILE *stream, const char *header,
     const char *format, ...);
