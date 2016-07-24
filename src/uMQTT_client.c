@@ -272,16 +272,15 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   }
 
   if (conn->client.clientid[0]) {
-    set_connect_payload(pkt, conn->client.clientid,
-        strlen(conn->client.clientid));
+    set_connect_payload(pkt, conn->client.clientid, NULL, NULL, NULL, NULL);
   } else {
     /* set unique clientid */
-    char buf[UMQTT_DEFAULT_PKT_LEN] = UMQTT_DEFAULT_TOPIC;
+    char buf[UMQTT_DEFAULT_PKT_LEN] = UMQTT_DEFAULT_CLIENTID;
     int len = strlen(buf);
     buf[len++] = '-';
     gen_unique_string(&buf[len], 8);
 
-    set_connect_payload(pkt, buf, strlen(buf));
+    set_connect_payload(pkt, buf, NULL, NULL, NULL, NULL);
   }
 
   finalise_packet(pkt);
@@ -583,7 +582,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     return UMQTT_PACKET_ERROR;
   }
 
-  set_subscribe_payload(pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
+  set_un_subscribe_payload(pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
   finalise_packet(pkt);
 
   /* register subscription */

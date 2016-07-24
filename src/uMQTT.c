@@ -81,8 +81,8 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
 
   pkt->len = pkt->fix_len;
 
-  if (type == SUBSCRIBE) {
-    /* Reserved bytes should be 0x02 for SUBSCRIBE */
+  if (type == PUBREL || type == SUBSCRIBE || type == UNSUBSCRIBE ) {
+    /* Reserved bytes should be 0x02 */
     pkt->fixed->generic.reserved = 0x02;
   }
 
@@ -98,6 +98,7 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
  */
 umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type) {
+  umqtt_ret ret = UMQTT_SUCCESS;
 
   log_stderr(LOG_DEBUG_FN, "fn: init_packet_variable_header");
 
@@ -115,24 +116,35 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       memcpy(pkt->variable->connect.proto_name, MQTT_PROTO_NAME, 0x04);
       pkt->variable->connect.proto_level = MQTT_PROTO_LEVEL;
       pkt->variable->connect.flags.clean_session_flag |= 1;
+      break;
 
+    case CONNACK:
+      pkt->var_len = sizeof(struct connack_variable_header);
       break;
 
     case PUBLISH:
-      /* variable header - default action => qos = 0 */
-
       /* defaults */
-      set_publish_variable_header(pkt, UMQTT_DEFAULT_TOPIC,
+      ret = set_publish_variable_header(pkt, UMQTT_DEFAULT_TOPIC,
           (sizeof(UMQTT_DEFAULT_TOPIC)));
-
       break;
 
     case SUBSCRIBE:
-      /* variable header - default action => qos = 0 */
+    case UNSUBSCRIBE:
       pkt->var_len = sizeof(struct generic_variable_header);
 
-      /* defaults */
-      set_subscribe_variable_header(pkt);
+      /* set packet identifier */
+      *(uint16_t *)&pkt->raw.buf[pkt->fix_len + pkt->var_len -
+        sizeof(struct generic_variable_header)] = generate_packet_id(0);
+
+      break;
+
+    case PUBACK:
+    case PUBREC:
+    case PUBREL:
+    case PUBCOMP:
+    case SUBACK:
+    case UNSUBACK:
+      pkt->var_len = sizeof(struct generic_variable_header);
 
       break;
 
@@ -145,12 +157,14 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       log_stderr(LOG_ERROR, "Init variable: MQTT packet type not supported: %s",
           type);
 
-      return UMQTT_ERROR;
+      ret = UMQTT_ERROR;
+      break;
   }
 
-  pkt->len = pkt->fix_len + pkt->var_len;
+  /* recalculate pay->len */
+  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
-  return UMQTT_SUCCESS;
+  return ret;
 }
 
 /**
@@ -190,19 +204,118 @@ umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
 }
 
 /**
+ * \brief Function to generate a new packet identifier
+ * \param pkt_id Packet identifier to set, if zero, the current packet
+ *          identifier value is incremented.
+ * \return big-endian 16-bit packet identifier.
+ */
+uint16_t generate_packet_id(uint16_t pkt_id) {
+  static uint16_t packet_id = 1;
+  log_stderr(LOG_DEBUG_FN, "fn: generate_packet_id");
+
+  if (pkt_id > 0) {
+    /* set pkt_id */
+    log_stderr(LOG_DEBUG, "Setting packet Id generator to %d", pkt_id);
+    packet_id = pkt_id;
+
+    return ((packet_id >> 8) | (packet_id << 8));
+
+  } else {
+    pkt_id = packet_id++;
+    return ((pkt_id >> 8) | (pkt_id << 8));
+  }
+}
+
+/**
+ * \brief Function to set the packet identifier of a packet.
+ * \param pkt The mxtt_packet.
+ * \param pkt_id The packet id value to set.
+ * \return Host format 16-bit packet identifier.
+ */
+uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id) {
+  log_stderr(LOG_DEBUG_FN, "fn: set_packet_pkt_id");
+
+  if ((pkt->fixed->generic.type == CONNECT) ||
+      (pkt->fixed->generic.type == CONNACK) ||
+      (pkt->fixed->generic.type == PINGREQ) ||
+      (pkt->fixed->generic.type == PINGRESP) ||
+      (pkt->fixed->generic.type == DISCONNECT) ||
+      (pkt->fixed->generic.type == PUBLISH &&
+       pkt->fixed->publish.qos == QOS_AT_MOST_ONCE)) {
+    /* No pkt_id */
+    return 0;
+
+  } else {
+    log_stderr(LOG_DEBUG, "Setting packet Id to %d", pkt_id);
+#ifdef BIG_ENDIAN_HOST
+
+#else
+    *(uint16_t *)&pkt->raw.buf[pkt->fix_len + pkt->var_len -
+      sizeof(struct generic_variable_header)] =
+      ((pkt_id >> 8) | (pkt_id << 8));
+    return pkt_id;
+#endif
+  }
+  return 0;
+}
+
+/**
+ * \brief Function to return the packet identifier of a packet.
+ * \param pkt The mxtt_packet.
+ * \return Host format 16-bit packet identifier.
+ */
+uint16_t get_packet_pkt_id(struct mqtt_packet *pkt) {
+  log_stderr(LOG_DEBUG_FN, "fn: get_packet_pkt_id");
+
+  if ((pkt->fixed->generic.type == CONNECT) ||
+      (pkt->fixed->generic.type == CONNACK) ||
+      (pkt->fixed->generic.type == PINGREQ) ||
+      (pkt->fixed->generic.type == PINGRESP) ||
+      (pkt->fixed->generic.type == DISCONNECT) ||
+      (pkt->fixed->generic.type == PUBLISH &&
+       pkt->fixed->publish.qos == QOS_AT_MOST_ONCE)) {
+    /* No pkt_id */
+    return 0;
+  } else {
+
+    /* pkt_id is always the last 2 bytes of the variable header */
+#ifdef BIG_ENDIAN_HOST
+
+#else
+    return (uint16_t)(*(uint16_t *)(&pkt->raw.buf[pkt->fix_len +
+          (pkt->var_len - sizeof(struct generic_variable_header))]) >> 8)
+      | (*(uint16_t *)(&pkt->raw.buf[pkt->fix_len +
+            (pkt->var_len - sizeof(struct generic_variable_header))]) << 8);
+#endif
+  }
+  return 0;
+}
+
+/**
  * \brief Function to set the variable header of a PUBLISH packet.
  * \param pkt Pointer to the address of the packet.
  * \param topic The topic for which the message should be published.
  * \param topic_len The length of the topic.
  */
-umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic,
-    size_t topic_len) {
+umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt,
+    const char *topic, size_t topic_len) {
+
   log_stderr(LOG_DEBUG_FN, "fn: set_publish_packet_variable_header");
 
-  pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic, topic, topic_len);
+  if (topic && topic[0] != '\0') {
+    pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic, topic,
+        topic_len);
+  } else {
+    pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic,
+        UMQTT_DEFAULT_TOPIC, sizeof(UMQTT_DEFAULT_TOPIC));
+  }
 
   if (pkt->fixed->publish.qos) {
     /* set packet identifier */
+    *(uint16_t *)&pkt->raw.buf[pkt->fix_len + pkt->var_len]
+      = generate_packet_id(0);
+
+    pkt->var_len += sizeof(uint16_t);
   }
 
   /* recalculate pay->len */
@@ -212,16 +325,11 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic
 }
 
 /**
- * \brief Function to set the variable header of a SUBSCRIBE packet.
+ * \brief Function to set the variable header of a CONNECT packet.
  * \param pkt Pointer to the address of the packet.
  */
-umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt) {
-
-  /* At present it isn't clear if this is required when qos = 0 */
-  pkt->variable->generic.pkt_id = 0x0000;
-
-  /* recalculate pay->len */
-  pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
+umqtt_ret set_connect_variable_header(struct mqtt_packet *pkt,
+    struct connect_flags flags, uint16_t keep_alive) {
 
   return UMQTT_SUCCESS;
 }
@@ -244,60 +352,81 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
-  /* allocate payload */
-  pkt->payload =
-    (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
+  /* Ensure packet type supports a payload */
+  if ((pkt->fixed->generic.type == CONNECT) ||
+      (pkt->fixed->generic.type == PUBLISH) ||
+      (pkt->fixed->generic.type == SUBSCRIBE) ||
+      (pkt->fixed->generic.type == SUBACK) ||
+      (pkt->fixed->generic.type == UNSUBSCRIBE)) {
 
-  if (pay_len) {
-    /* ensure payload is less that mqtt max */
-    if (pay_len <= MAX_REMAIN_LEN_PRODUCT) {
+    /* allocate payload */
+    pkt->payload =
+      (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
-      /* increase packet size? */
-      if ((pay_len + pkt->fix_len + pkt->var_len) > pkt->raw.len) {
-        size_t new_len = pay_len + pkt->fix_len + pkt->var_len;
-        ret = resize_packet(&pkt, new_len);
-        if (ret) {
-          log_stderr(LOG_ERROR, "Payload resize failed");
-          return UMQTT_PAYLOAD_ERROR;
+    if (pay_len > 0 && payload) {
+      /* ensure payload is less that mqtt max */
+      if (pay_len <= MAX_REMAIN_LEN_PRODUCT) {
+
+        /* increase packet size? */
+        if ((pay_len + pkt->fix_len + pkt->var_len) > pkt->raw.len) {
+          size_t new_len = pay_len + pkt->fix_len + pkt->var_len;
+          ret = resize_packet(&pkt, new_len);
+          if (ret) {
+            log_stderr(LOG_ERROR, "Payload resize failed");
+            return UMQTT_PAYLOAD_ERROR;
+          }
         }
-      }
 
-      /* copy payload data */
-      pkt->pay_len = pay_len;
-      memcpy(&pkt->payload->data, payload, pay_len);
+        /* copy payload data */
+        pkt->pay_len = pay_len;
+        memcpy(&pkt->payload->data, payload, pay_len);
 
-    } else {
+      } else {
         log_stderr(LOG_ERROR,
             "Payload length causes remaining length overflow");
         return UMQTT_PAYLOAD_ERROR;
-    }
+      }
 
+    } else {
+
+      /* defaults */
+      switch (type) {
+        case CONNECT:
+          /* The clientid set here should always be overloaded */
+          ret = set_connect_payload(pkt, UMQTT_DEFAULT_CLIENTID,
+              NULL, NULL, NULL, NULL);
+          break;
+
+        case SUBSCRIBE:
+        case UNSUBSCRIBE:
+          ret = set_un_subscribe_payload(pkt, UMQTT_DEFAULT_TOPIC,
+              sizeof(UMQTT_DEFAULT_TOPIC), UMQTT_DEFAULT_QOS);
+          break;
+
+        case SUBACK:
+          /* single byte return code */
+          pkt->pay_len++;
+          break;
+
+        case PUBLISH:
+          /* payload optional, so if none specified, make length 0 */
+          pkt->pay_len = 0;
+          break;
+
+        default:
+          log_stderr(LOG_DEBUG,
+              "Init packet: MQTT packet type does not support a payload", type);
+      }
+    }
   } else {
 
-    /* defaults */
-    switch (type) {
-      case CONNECT:
-        /* The clientid set here should always be overloaded */
-        set_connect_payload(pkt, UMQTT_DEFAULT_CLIENTID,
-            sizeof(UMQTT_DEFAULT_CLIENTID));
-        break;
-
-      case SUBSCRIBE:
-        set_subscribe_payload(pkt, UMQTT_DEFAULT_TOPIC,
-            sizeof(UMQTT_DEFAULT_TOPIC), UMQTT_DEFAULT_QOS);
-        break;
-
-      case PUBLISH:
-      case PINGREQ:
-      case PINGRESP:
-      case DISCONNECT:
-        break;
-
-      default:
-        log_stderr(LOG_ERROR, "Init packet: MQTT packet type not supported: %s",
-            type);
-
-        return UMQTT_ERROR;
+    if (!pay_len) {
+      /* probably just initialising packet */
+      ret = UMQTT_SUCCESS;
+    } else {
+      log_stderr(LOG_ERROR,
+          "Init packet: MQTT packet type does not support a payload", type);
+      ret = UMQTT_PACKET_ERROR;
     }
   }
 
@@ -312,19 +441,70 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
  * \param clientid The client ID.
  * \param len The length of the Client ID.
  */
+
 umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
-    size_t len) {
+    const char *username, const char *password, const char *topic,
+    const char *message) {
   log_stderr(LOG_DEBUG_FN, "fn: set_connect_payload");
 
   /* set clientid */
-  pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
-      clientid, len);
+  if (clientid && clientid[0] != '\0') {
+
+    pkt->pay_len = encode_utf8_string(
+        (struct utf8_enc_str *)&pkt->payload->data, clientid, strlen(clientid));
+  }
+
+  /* setup pointer to struct */
+  pkt->payload_p.connect.clientId = (struct utf8_enc_str *)&pkt->payload->data;
+
+  /* set last will */
+  if (pkt->variable->connect.flags.will_flag) {
+
+    /* will topic */
+    pkt->payload_p.connect.will_topic =
+      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
+    if (topic) {
+      pkt->pay_len += encode_utf8_string(
+          (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len),
+          topic, strlen(topic));
+    }
+
+    /* will message */
+    pkt->payload_p.connect.will_message =
+      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
+    if (message) {
+      pkt->pay_len += encode_utf8_string(
+          (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), message,
+          strlen(message));
+    }
+  }
+
+  /* set username */
+  if (pkt->variable->connect.flags.user_flag) {
+    pkt->payload_p.connect.user_name =
+      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
+    if (username) {
+      pkt->pay_len += encode_utf8_string(
+          (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), username,
+          strlen(username));
+    }
+  }
+
+  /* set password */
+  if (pkt->variable->connect.flags.pass_flag) {
+    pkt->payload_p.connect.password =
+      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len);
+    if (password) {
+      pkt->pay_len += encode_utf8_string(
+          (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), password,
+          strlen(password));
+    }
+  }
 
   /* recalculate pay->len */
   pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return UMQTT_SUCCESS;
-
 }
 
 /**
@@ -361,23 +541,27 @@ umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
 }
 
 /**
- * \brief Function to set the topic of a SUBSCRIBE packet.
- *        NOTE: We currently only support one topic per subscribe message.
- * \param topic The topic to subscribe to.
+ * \brief Function to set the topics of a SUBSCRIBE or UNSUBSCRIBE packet.
+ * \param topic The topic to subscribe or unsubscribe to.
  * \param topic_len The length of the topic.
- * \param qos The subscription QOS.
+ * \param qos The subscription QOS - SUBSCRIBE only.
  */
-umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
+umqtt_ret set_un_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos) {
-  log_stderr(LOG_DEBUG_FN, "fn: set_subscribe_payload");
+  log_stderr(LOG_DEBUG_FN, "fn: set_un_subscribe_payload");
 
   /* set topic */
-  pkt->pay_len = encode_utf8_string((struct utf8_enc_str *)&pkt->payload->data,
-      topic, topic_len);
-  /* set topic QOS */
-  *(&pkt->payload->data + pkt->pay_len++) = (0x03 & qos);
+  /* should guard against buffer overflow */
+  pkt->pay_len += encode_utf8_string(
+      (struct utf8_enc_str *)(&pkt->payload->data + pkt->pay_len), topic,
+      topic_len);
 
-  /* recalculate pay->len */
+  if (pkt->fixed->generic.type == SUBSCRIBE) {
+    /* set topic QOS */
+    *(&pkt->payload->data + pkt->pay_len++) = (0x03 & qos);
+  }
+
+  /* recalculate pkt->len */
   pkt->len = pkt->fix_len + pkt->var_len + pkt->pay_len;
 
   return UMQTT_SUCCESS;
@@ -440,6 +624,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
  */
 size_t finalise_packet(struct mqtt_packet *pkt) {
   log_stderr(LOG_DEBUG_FN, "fn: finalise_packet");
+
   size_t fix_len = pkt->fix_len;
   size_t delta = 0;
 
@@ -449,13 +634,10 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
   if (delta) {
     /* need to shift data backwards to ensure packet is packed */
     memmove_back(&pkt->raw.buf[pkt->fix_len], delta, pkt->var_len);
-    memmove_back(&pkt->raw.buf[pkt->fix_len + pkt->var_len], delta, pkt->pay_len);
+    memmove_back(&pkt->raw.buf[pkt->fix_len + pkt->var_len], delta,
+        pkt->pay_len);
 
-    /* reassign pointers to packet elements */
-    pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
-    pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
-
-    pkt->len -= delta;
+    realign_packet(pkt);
   }
 
   /* recalculate pay->len */
@@ -484,7 +666,8 @@ void realign_packet(struct mqtt_packet *pkt) {
   pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
 
   /* align payload */
-  pkt->payload = (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
+  pkt->payload =
+    (struct pkt_payload *)&pkt->raw.buf[pkt->fix_len + pkt->var_len];
 
   return;
 }
@@ -575,6 +758,8 @@ umqtt_ret disect_raw_payload(struct mqtt_packet *pkt) {
   }
   if (padding > pkt->pay_len) {
     log_stderr(LOG_ERROR, "Malformed packet - payload larger than length");
+    log_stderr(LOG_DEBUG, "Lengths: payload: %zu, padding: %zu", pkt->pay_len,
+        padding);
     ret = UMQTT_PACKET_ERROR;
   }
 
@@ -627,7 +812,7 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
       pkt->var_len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
           | (pkt->variable->publish.topic.len_lsb));
 
-      /* utf8 encoded string length */ 
+      /* utf8 encoded string length */
       pkt->var_len += 2;
 
       if (pkt->fixed->publish.qos == QOS_AT_LEAST_ONCE ||
@@ -645,7 +830,7 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
       pkt->var_len = sizeof(struct generic_variable_header);
       /* validate reserved nibble */
       if (pkt->fixed->generic.reserved != 0x00 ) {
-        log_stderr(LOG_ERROR, "Malformed packet --- reserved nibble: 0x%X",
+        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
             pkt->fixed->generic.reserved);
         ret = UMQTT_PACKET_ERROR;
       }

@@ -29,7 +29,7 @@
 /* default defines - some can be overridden */
 #define MQTT_PROTO_NAME           "MQTT"
 #define MQTT_PROTO_LEVEL          0x04
-#define UMQTT_DEFAULT_CLIENTID    "uMQTT"
+#define UMQTT_DEFAULT_CLIENTID    "uMQTT-cli"
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
 #define UMQTT_DEFAULT_QOS         0
 
@@ -382,7 +382,6 @@ struct mqtt_packet {
   size_t len;
 
   struct pkt_payload_ptrs payload_p;
-
 };
 
 /*
@@ -397,13 +396,15 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic
     size_t topic_len);
 umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
     uint8_t qos, uint8_t dup);
-umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
-umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *cID,
-    size_t cID_len);
-umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
+umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
+    const char *username, const char *password, const char *topic,
+    const char *message);
+umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
+umqtt_ret set_un_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos);
+void set_subscribe_topic_qos(struct mqtt_packet *pkt, uint8_t qos);
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
@@ -412,6 +413,10 @@ size_t finalise_packet(struct mqtt_packet *pkt);
 void realign_packet(struct mqtt_packet *pkt);
 umqtt_ret disect_raw_packet(struct mqtt_packet *pkt);
 umqtt_ret disect_raw_payload(struct mqtt_packet *pkt);
+
+uint16_t generate_packet_id(uint16_t pkt_id);
+uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id);
+uint16_t get_packet_pkt_id(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
