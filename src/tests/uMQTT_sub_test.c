@@ -46,7 +46,7 @@ int main() {
   init_linux_socket_connection(&conn, MQTT_BROKER_IP,
       sizeof(MQTT_BROKER_IP), 1883);
   if (!conn) {
-    log_stderr(LOG_ERROR, "Initialising socket connection");
+    log_std(LOG_ERROR, "Initialising socket connection");
     free_linux_socket(conn);
     return -1;
   }
@@ -54,11 +54,11 @@ int main() {
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   if (broker_connect(conn)) {
-    log_stderr(LOG_ERROR, "Initialising socket connection");
+    log_std(LOG_ERROR, "Initialising socket connection");
     free_linux_socket(conn);
     return -1;
   } else {
-    log_stdout(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
+    log_std(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
   }
 
 
@@ -68,7 +68,7 @@ int main() {
   struct mqtt_packet *pkt = NULL;
 
   if (init_packet(&pkt)) {
-    log_stderr(LOG_ERROR, "Initialising packet");
+    log_std(LOG_ERROR, "Initialising packet");
     free_linux_socket(conn);
     free_packet(sub_pkt);
     return -1;
@@ -76,44 +76,44 @@ int main() {
 
   /* Send SUBSCRIBE and wait for SUBACK - although, note that this could be
      a PUBLISH msg. */
-  log_stdout(LOG_INFO, "\nSending Packet\n--------------");
+  log_std(LOG_INFO, "\nSending Packet\n--------------");
   print_packet_hex_debug(sub_pkt);
   conn->send_method(conn, sub_pkt);
 
-  ret = conn->receive_method(conn, pkt); 
+  ret = conn->receive_method(conn, pkt);
   if (ret) {
-    log_stderr(LOG_ERROR, "SUBACK failed");
+    log_std(LOG_ERROR, "SUBACK failed");
     goto free;
   }
 
-  log_stdout(LOG_INFO, "\nReceived Packet\n---------------");
+  log_std(LOG_INFO, "\nReceived Packet\n---------------");
   print_packet_hex_debug(pkt);
 
   /* PUBLISH message */
-  log_stdout(LOG_INFO, "\nSending Packet\n--------------");
+  log_std(LOG_INFO, "\nSending Packet\n--------------");
   print_packet_hex_debug(pub_pkt);
   ret = conn->send_method(conn, pub_pkt);
   if (ret) {
-    log_stderr(LOG_ERROR, "Sending PUBLISH message failed");
+    log_std(LOG_ERROR, "Sending PUBLISH message failed");
     goto free;
   }
 
   /* Wait for first message - should be the PUBLISH */
   ret = conn->receive_method(conn, pkt); 
   if (ret) {
-    log_stderr(LOG_ERROR, "Receiving PUBLISH failed");
+    log_std(LOG_ERROR, "Receiving PUBLISH failed");
     goto free;
   }
 
-  log_stdout(LOG_INFO, "\nReceived Packet\n---------------");
+  log_std(LOG_INFO, "\nReceived Packet\n---------------");
   print_packet_hex_debug(pkt);
 
   /* not fool proof */
   if (pkt->fixed->generic.type == PUBLISH) {
-    log_stdout(LOG_INFO, "\n*** Tests Passed ***");
+    log_std(LOG_INFO, "\n*** Tests Passed ***");
     ret = 0;
   } else {
-    log_stdout(LOG_INFO, "\n*** Tests Failed ***");
+    log_std(LOG_INFO, "\n*** Tests Failed ***");
     ret = -1;
   }
 

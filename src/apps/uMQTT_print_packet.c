@@ -91,7 +91,7 @@ void sanatise_hex_input(char *in, size_t *len) {
 
   *len = strlen(in);
   if (olen != *len) {
-    log_stderr(LOG_DEBUG, "Removed %zu spaces from string", olen - *len);
+    log_std(LOG_DEBUG, "Removed %zu spaces from string", olen - *len);
     olen = *len;
   }
   buf = in;
@@ -103,9 +103,9 @@ void sanatise_hex_input(char *in, size_t *len) {
 
   *len = strlen(in);
   if (olen != *len) {
-    log_stderr(LOG_DEBUG, "Removed %zu instances of '0x' from string",
+    log_std(LOG_DEBUG, "Removed %zu instances of '0x' from string",
         olen - *len);
-    log_stderr(LOG_DEBUG, "New string length: %zu", *len);
+    log_std(LOG_DEBUG, "New string length: %zu", *len);
   }
 
   return;
@@ -117,26 +117,26 @@ umqtt_ret sanatise_hex_input_utest() {
   char in[sizeof(UMQTT_TEST_PACKET_HEX_UNSANATISED)] =
     UMQTT_TEST_PACKET_HEX_UNSANATISED;
 
-  log_stdout(LOG_INFO, "\nSanatise Hex string to uint array conversion test");
-  log_stdout(LOG_INFO, "Hex string of %zu bytes in:\n%s", len, in);
+  log_std(LOG_INFO, "\nSanatise Hex string to uint array conversion test");
+  log_std(LOG_INFO, "Hex string of %zu bytes in:\n%s", len, in);
   sanatise_hex_input(in, &len);
-  log_stdout(LOG_INFO, "\nHex string of %zu bytes out:\n%s", len, in);
+  log_std(LOG_INFO, "\nHex string of %zu bytes out:\n%s", len, in);
 
   if (len == (sizeof(UMQTT_TEST_PACKET_HEX) - 1)) {
-    log_stdout(LOG_INFO, "PASSED: sanatisation length test:");
+    log_std(LOG_INFO, "PASSED: sanatisation length test:");
 
   } else {
-    log_stderr(LOG_ERROR, "FAILED: sanatisation length test:");
+    log_std(LOG_ERROR, "FAILED: sanatisation length test:");
     ret = UMQTT_ERROR;
   }
-  log_stdout(LOG_INFO, "   original sizeof(in): %zu, new sizeof(out): %zu",
+  log_std(LOG_INFO, "   original sizeof(in): %zu, new sizeof(out): %zu",
       sizeof(UMQTT_TEST_PACKET_HEX_UNSANATISED) - 1, len);
 
   if (!strcmp(in, UMQTT_TEST_PACKET_HEX)) {
-    log_stdout(LOG_INFO, "PASSED: sanatisation output string correct");
+    log_std(LOG_INFO, "PASSED: sanatisation output string correct");
 
   } else {
-    log_stderr(LOG_ERROR, "FAILED: sanatisation output string incorrect");
+    log_std(LOG_ERROR, "FAILED: sanatisation output string incorrect");
     ret = UMQTT_ERROR;
   }
 
@@ -170,21 +170,21 @@ size_t hex_str_to_uint(char *in, size_t len, uint8_t *out) {
 
   sanatise_hex_input(in, &len);
 
-  log_stderr(LOG_DEBUG, "Converting HEX string of %zu bytes:\n%s", len, in);
+  log_std(LOG_DEBUG, "Converting HEX string of %zu bytes:\n%s", len, in);
   if (len  % 2 == 0) {
     for (count = 0; count < len && (count / 2) < nibbles; count += 2) {
 
       if (hex_char_to_uint(&in[count], &hnibble)) {
-        log_stderr(LOG_ERROR, "Hex conversion - high nibble");
+        log_std(LOG_ERROR, "Hex conversion - high nibble");
       }
       if (hex_char_to_uint(&in[count + 1], &lnibble)) {
-        log_stderr(LOG_ERROR, "Hex conversion - low nibble");
+        log_std(LOG_ERROR, "Hex conversion - low nibble");
       }
 
       out[count / 2] = ((hnibble) << 4) | (lnibble & 0x0f);
     }
   } else {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Hex packet input should be an even number of nibbles");
   }
 
@@ -196,17 +196,17 @@ umqtt_ret hex_str_to_uint_utest() {
   char in[sizeof(UMQTT_TEST_PACKET_HEX)] = UMQTT_TEST_PACKET_HEX;
   uint8_t out[sizeof(UMQTT_TEST_PACKET_HEX) / 2] = {0};
 
-  log_stdout(LOG_INFO, "\nHex string to uint array conversion test");
+  log_std(LOG_INFO, "\nHex string to uint array conversion test");
   size_t len = hex_str_to_uint(in, sizeof(UMQTT_TEST_PACKET_HEX) - 1, out);
 
   if (len == ((sizeof(UMQTT_TEST_PACKET_HEX) - 1) / 2)) {
-    log_stdout(LOG_INFO, "PASSED: Output array length test:");
-    log_stdout(LOG_INFO, "   sizeof(in): %zu, sizeof(out): %zu, (in/out) = 2",
+    log_std(LOG_INFO, "PASSED: Output array length test:");
+    log_std(LOG_INFO, "   sizeof(in): %zu, sizeof(out): %zu, (in/out) = 2",
         sizeof(UMQTT_TEST_PACKET_HEX) - 1, len);
 
   } else {
-    log_stderr(LOG_ERROR, "FAILED: Output array length test:");
-    log_stderr(LOG_ERROR, "   sizeof(in): %zu, sizeof(out): %zu, (in/out) != 2",
+    log_std(LOG_ERROR, "FAILED: Output array length test:");
+    log_std(LOG_ERROR, "   sizeof(in): %zu, sizeof(out): %zu, (in/out) != 2",
         sizeof(UMQTT_TEST_PACKET_HEX) - 1, len);
 
     ret = UMQTT_ERROR;
@@ -221,16 +221,16 @@ size_t hex_char_to_uint_utest() {
   char in = '0';
   uint8_t out = 0, i;
 
-  log_stdout(LOG_INFO, "\nHex char to uint conversion test");
+  log_std(LOG_INFO, "\nHex char to uint conversion test");
 
   for (i = 0; i <= 15; i++) {
     hex_char_to_uint(&in, &out);
     if (out == i) {
-      log_stdout(LOG_INFO, "PASSED: i: %d: in: '%c' out: %X (i == out)",
+      log_std(LOG_INFO, "PASSED: i: %d: in: '%c' out: %X (i == out)",
           i, in, out);
       ret = UMQTT_SUCCESS;
     } else {
-      log_stdout(LOG_INFO, "FAILED: i: %d: in: '%c' out: %X (i != out)",
+      log_std(LOG_INFO, "FAILED: i: %d: in: '%c' out: %X (i != out)",
           i, in, out);
       ret = UMQTT_ERROR;
     }
@@ -256,7 +256,7 @@ umqtt_ret file_read_contents(const char *filename, uint8_t *buf, size_t *len) {
 
   FILE *f = fopen(filename, "rb");
   if (!f) {
-    log_stderr(LOG_ERROR, "Failed to open file: %s - %s", filename,
+    log_std(LOG_ERROR, "Failed to open file: %s - %s", filename,
         strerror(errno));
     return UMQTT_FILE_ERROR;
   }
@@ -266,7 +266,7 @@ umqtt_ret file_read_contents(const char *filename, uint8_t *buf, size_t *len) {
   fseek(f, 0, SEEK_SET);
 
   if (fsize > *len) {
-    log_stderr(LOG_ERROR, "The file size (%zu) is larger than buffer size (%zu)",
+    log_std(LOG_ERROR, "The file size (%zu) is larger than buffer size (%zu)",
         fsize, *len);
     ret = UMQTT_PAYLOAD_ERROR;
   } else {
@@ -276,29 +276,29 @@ umqtt_ret file_read_contents(const char *filename, uint8_t *buf, size_t *len) {
 
         if (line[0] == '#') {
           /* comment - ignore */
-          log_stderr(LOG_DEBUG, "Ignoring comment: %s", line);
+          log_std(LOG_DEBUG, "Ignoring comment: %s", line);
           continue;
         }
 
         if (line[0] == 0x0A) {
           /* newline - ignore */
-          log_stderr(LOG_DEBUG, "Ignoring newline");
+          log_std(LOG_DEBUG, "Ignoring newline");
           continue;
         }
 
-        log_stderr(LOG_DEBUG, "Retrieved line of length %zu", rlen);
+        log_std(LOG_DEBUG, "Retrieved line of length %zu", rlen);
         memcpy(buf + b_ptr, line, rlen);
         b_ptr += rlen ;
 
         if (b_ptr >= *len) {
-          log_stderr(LOG_DEBUG, "File buffer full: %zu bytes", *len);
+          log_std(LOG_DEBUG, "File buffer full: %zu bytes", *len);
           ret = UMQTT_ERROR;
           break;
         }
       }
     }
-    log_stderr(LOG_DEBUG, "File buffer used: %zu of %zu bytes", b_ptr, *len);
-    log_stderr(LOG_DEBUG, "Buffer:\n%s\n", buf);
+    log_std(LOG_DEBUG, "File buffer used: %zu of %zu bytes", b_ptr, *len);
+    log_std(LOG_DEBUG, "Buffer:\n%s\n", buf);
     free(line);
     *len = b_ptr;
 
@@ -320,7 +320,7 @@ int main(int argc, char **argv) {
 
   struct mqtt_packet *pkt = NULL;
   if (init_packet(&pkt)) {
-    log_stdout(LOG_INFO, "ERROR: Packet creation failed");
+    log_std(LOG_INFO, "ERROR: Packet creation failed");
     return UMQTT_ERROR;
   }
 
@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
             /* Need to find a reliable way of determining length.*/
             strcpy((char *)&pkt_buf, optarg);
           } else {
-            log_stderr(LOG_ERROR, "The packet flag should be followed by a string");
+            log_std(LOG_ERROR, "The packet flag should be followed by a string");
             ret = print_usage();
             goto cleanup;
           }
@@ -369,14 +369,14 @@ int main(int argc, char **argv) {
 
         case 'b':
           /* Set input format to binary*/
-            log_stderr(LOG_ERROR, "Binary input is not currently supported");
+            log_std(LOG_ERROR, "Binary input is not currently supported");
             ret = print_usage();
             goto cleanup;
           break;
 
         case 'x':
           /* Set output format to hex*/
-            log_stderr(LOG_ERROR, "Hex output format is not currently supported");
+            log_std(LOG_ERROR, "Hex output format is not currently supported");
             ret = print_usage();
             goto cleanup;
           break;
@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(filename, optarg);
           } else {
-            log_stderr(LOG_ERROR, "The file flag should be followed by a file");
+            log_std(LOG_ERROR, "The file flag should be followed by a file");
             ret = print_usage();
             goto cleanup;
           }
@@ -394,11 +394,11 @@ int main(int argc, char **argv) {
 
         case 't':
 
-          log_stdout(LOG_INFO, "Running unti tests...");
-          log_stdout(LOG_INFO, "Help test:");
+          log_std(LOG_INFO, "Running unti tests...");
+          log_std(LOG_INFO, "Help test:");
           print_usage();
 
-          log_stdout(LOG_INFO, "hex_char_to_uint_utest:"); 
+          log_std(LOG_INFO, "hex_char_to_uint_utest:"); 
           ret = hex_char_to_uint_utest();
           ret = hex_str_to_uint_utest();
 
@@ -415,7 +415,7 @@ int main(int argc, char **argv) {
   }
 
   if ((!cl_pkt && !*filename) || (cl_pkt && *filename)) {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Must specify either a filename or a packet, not both");
     ret = UMQTT_ERROR;
     print_usage();
@@ -423,10 +423,10 @@ int main(int argc, char **argv) {
   }
 
   if (*filename) {
-    log_stdout(LOG_INFO, "Reading packets from file: %s", filename);
+    log_std(LOG_INFO, "Reading packets from file: %s", filename);
     ret = file_read_contents(filename, file_buf, &file_len);
     if (ret) {
-      log_stderr(LOG_ERROR, "Could not read file");
+      log_std(LOG_ERROR, "Could not read file");
       goto cleanup;
     }
 
@@ -452,7 +452,7 @@ int main(int argc, char **argv) {
       /* print packet */
       ret = disect_raw_packet(pkt);
       if (ret) {
-        log_stderr(LOG_ERROR, "Failed to decode %s packet.",
+        log_std(LOG_ERROR, "Failed to decode %s packet.",
             get_type_string(pkt->fixed->generic.type));
       } else {
         print_packet_detailed(pkt);
@@ -469,7 +469,7 @@ int main(int argc, char **argv) {
 
     ret = disect_raw_packet(pkt);
     if (ret) {
-      log_stderr(LOG_ERROR, "Failed to decode %s packet.",
+      log_std(LOG_ERROR, "Failed to decode %s packet.",
           get_type_string(pkt->fixed->generic.type));
     } else {
       print_packet_detailed(pkt);

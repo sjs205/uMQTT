@@ -37,15 +37,15 @@
 umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
   struct mqtt_packet *pkt;
 
-  log_stderr(LOG_DEBUG_FN, "fn: init_packet");
+  log_std(LOG_DEBUG_FN, "fn: init_packet");
 
   if (!(pkt = calloc(1, sizeof(struct mqtt_packet)))) {
-    log_stderr(LOG_ERROR, "Allocating space for MQTT packet failed");
+    log_std(LOG_ERROR, "Allocating space for MQTT packet failed");
     return UMQTT_MEM_ERROR;
   }
 
   if (!(pkt->raw.buf = calloc(sizeof(uint8_t), UMQTT_DEFAULT_PKT_LEN))) {
-    log_stderr(LOG_ERROR, "Allocating space for raw packet failed");
+    log_std(LOG_ERROR, "Allocating space for raw packet failed");
     free_packet(pkt);
     return UMQTT_MEM_ERROR;
   }
@@ -53,7 +53,7 @@ umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
   pkt->raw.len = UMQTT_DEFAULT_PKT_LEN;
   *pkt_p = pkt;
 
-  log_stderr(LOG_DEBUG_FN, "New packet with %zu bytes allocated", pkt->raw.len);
+  log_std(LOG_DEBUG_FN, "New packet with %zu bytes allocated", pkt->raw.len);
 
   return UMQTT_SUCCESS;
 }
@@ -68,7 +68,7 @@ umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
 umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type) {
 
-  log_stderr(LOG_DEBUG_FN, "fn: init_packet_fixed_header");
+  log_std(LOG_DEBUG_FN, "fn: init_packet_fixed_header");
 
   /* allocate initial fixed header length */
   pkt->fix_len =
@@ -100,7 +100,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
     ctrl_pkt_type type) {
   umqtt_ret ret = UMQTT_SUCCESS;
 
-  log_stderr(LOG_DEBUG_FN, "fn: init_packet_variable_header");
+  log_std(LOG_DEBUG_FN, "fn: init_packet_variable_header");
 
   /* allocate variable header */
   pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];
@@ -154,7 +154,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
       break;
 
     default:
-      log_stderr(LOG_ERROR, "Init variable: MQTT packet type not supported: %s",
+      log_std(LOG_ERROR, "Init variable: MQTT packet type not supported: %s",
           type);
 
       ret = UMQTT_ERROR;
@@ -176,7 +176,7 @@ umqtt_ret init_packet_variable_header(struct mqtt_packet *pkt,
  */
 umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
     qos_t qos, uint8_t dup) {
-  log_stderr(LOG_DEBUG_FN, "fn: set_publish_fixed_flags");
+  log_std(LOG_DEBUG_FN, "fn: set_publish_fixed_flags");
   if (pkt) {
     if (retain) {
       pkt->fixed->publish.retain = 1;
@@ -198,7 +198,7 @@ umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
 
     return UMQTT_SUCCESS;
   } else {
-    log_stderr(LOG_ERROR, "Invalid packet");
+    log_std(LOG_ERROR, "Invalid packet");
     return UMQTT_PACKET_ERROR;
   }
 }
@@ -211,11 +211,11 @@ umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
  */
 uint16_t generate_packet_id(uint16_t pkt_id) {
   static uint16_t packet_id = 1;
-  log_stderr(LOG_DEBUG_FN, "fn: generate_packet_id");
+  log_std(LOG_DEBUG_FN, "fn: generate_packet_id");
 
   if (pkt_id > 0) {
     /* set pkt_id */
-    log_stderr(LOG_DEBUG, "Setting packet Id generator to %d", pkt_id);
+    log_std(LOG_DEBUG, "Setting packet Id generator to %d", pkt_id);
     packet_id = pkt_id;
 
     return ((packet_id >> 8) | (packet_id << 8));
@@ -233,7 +233,7 @@ uint16_t generate_packet_id(uint16_t pkt_id) {
  * \return Host format 16-bit packet identifier.
  */
 uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id) {
-  log_stderr(LOG_DEBUG_FN, "fn: set_packet_pkt_id");
+  log_std(LOG_DEBUG_FN, "fn: set_packet_pkt_id");
 
   if ((pkt->fixed->generic.type == CONNECT) ||
       (pkt->fixed->generic.type == CONNACK) ||
@@ -246,7 +246,7 @@ uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id) {
     return 0;
 
   } else {
-    log_stderr(LOG_DEBUG, "Setting packet Id to %d", pkt_id);
+    log_std(LOG_DEBUG, "Setting packet Id to %d", pkt_id);
 #ifdef BIG_ENDIAN_HOST
 
 #else
@@ -265,7 +265,7 @@ uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id) {
  * \return Host format 16-bit packet identifier.
  */
 uint16_t get_packet_pkt_id(struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: get_packet_pkt_id");
+  log_std(LOG_DEBUG_FN, "fn: get_packet_pkt_id");
 
   if ((pkt->fixed->generic.type == CONNECT) ||
       (pkt->fixed->generic.type == CONNACK) ||
@@ -300,7 +300,7 @@ uint16_t get_packet_pkt_id(struct mqtt_packet *pkt) {
 umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt,
     const char *topic, size_t topic_len) {
 
-  log_stderr(LOG_DEBUG_FN, "fn: set_publish_packet_variable_header");
+  log_std(LOG_DEBUG_FN, "fn: set_publish_packet_variable_header");
 
   if (topic && topic[0] != '\0') {
     pkt->var_len = encode_utf8_string(&pkt->variable->publish.topic, topic,
@@ -348,7 +348,7 @@ umqtt_ret set_connect_variable_header(struct mqtt_packet *pkt,
  */
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len) {
-  log_stderr(LOG_DEBUG_FN, "fn: init_packet_payload");
+  log_std(LOG_DEBUG_FN, "fn: init_packet_payload");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -372,7 +372,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
           size_t new_len = pay_len + pkt->fix_len + pkt->var_len;
           ret = resize_packet(&pkt, new_len);
           if (ret) {
-            log_stderr(LOG_ERROR, "Payload resize failed");
+            log_std(LOG_ERROR, "Payload resize failed");
             return UMQTT_PAYLOAD_ERROR;
           }
         }
@@ -382,7 +382,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
         memcpy(&pkt->payload->data, payload, pay_len);
 
       } else {
-        log_stderr(LOG_ERROR,
+        log_std(LOG_ERROR,
             "Payload length causes remaining length overflow");
         return UMQTT_PAYLOAD_ERROR;
       }
@@ -414,7 +414,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
           break;
 
         default:
-          log_stderr(LOG_DEBUG,
+          log_std(LOG_DEBUG,
               "Init packet: MQTT packet type does not support a payload", type);
       }
     }
@@ -424,7 +424,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
       /* probably just initialising packet */
       ret = UMQTT_SUCCESS;
     } else {
-      log_stderr(LOG_ERROR,
+      log_std(LOG_ERROR,
           "Init packet: MQTT packet type does not support a payload", type);
       ret = UMQTT_PACKET_ERROR;
     }
@@ -445,7 +445,7 @@ umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
 umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
     const char *username, const char *password, const char *topic,
     const char *message) {
-  log_stderr(LOG_DEBUG_FN, "fn: set_connect_payload");
+  log_std(LOG_DEBUG_FN, "fn: set_connect_payload");
 
   /* set clientid */
   if (clientid && clientid[0] != '\0') {
@@ -499,13 +499,13 @@ umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
  * \return the number of bytes saved
  */
 umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
-  log_stderr(LOG_DEBUG_FN, "fn: resize_packet");
+  log_std(LOG_DEBUG_FN, "fn: resize_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
   uint8_t *buf = realloc((*pkt_p)->raw.buf, len * sizeof(uint8_t));
   if (!buf) {
-    log_stderr(LOG_ERROR, "Packet resize failed");
+    log_std(LOG_ERROR, "Packet resize failed");
     ret = UMQTT_MEM_ERROR;
   } else {
 
@@ -519,7 +519,7 @@ umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
     /* ensure packet is aligned with raw packet */
     realign_packet(*pkt_p);
 
-    log_stderr(LOG_DEBUG_FN, "Packet resize sucessfull, new length: %zu", len);
+    log_std(LOG_DEBUG_FN, "Packet resize sucessfull, new length: %zu", len);
   }
 
   return ret;
@@ -533,7 +533,7 @@ umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
  */
 umqtt_ret set_un_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos) {
-  log_stderr(LOG_DEBUG_FN, "fn: set_un_subscribe_payload");
+  log_std(LOG_DEBUG_FN, "fn: set_un_subscribe_payload");
 
   /* set topic */
   /* should guard against buffer overflow */
@@ -558,7 +558,7 @@ umqtt_ret set_un_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
  * \return Pointer to new mqtt_packet struct, 0 on failurer.
  */
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type) {
-  log_stderr(LOG_DEBUG_FN, "fn: construct_packet_headers");
+  log_std(LOG_DEBUG_FN, "fn: construct_packet_headers");
 
   struct mqtt_packet *pkt = '\0';
 
@@ -589,7 +589,7 @@ struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type) {
  */
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len) {
-  log_stderr(LOG_DEBUG_FN, "fn: construct_default_packet");
+  log_std(LOG_DEBUG_FN, "fn: construct_default_packet");
 
   struct mqtt_packet *pkt = construct_packet_headers(type);
 
@@ -608,7 +608,7 @@ struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
  * \return the number of bytes saved
  */
 size_t finalise_packet(struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: finalise_packet");
+  log_std(LOG_DEBUG_FN, "fn: finalise_packet");
 
   size_t fix_len = pkt->fix_len;
   size_t delta = 0;
@@ -642,7 +642,7 @@ size_t finalise_packet(struct mqtt_packet *pkt) {
  * \param pkt The mxtt_packet to realign.
  */
 void realign_packet(struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: realign_packet");
+  log_std(LOG_DEBUG_FN, "fn: realign_packet");
 
   /* align fixed header */
   pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
@@ -663,7 +663,7 @@ void realign_packet(struct mqtt_packet *pkt) {
  */
 umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
   umqtt_ret ret = UMQTT_SUCCESS;
-  log_stderr(LOG_DEBUG_FN, "fn: disect_raw_packet");
+  log_std(LOG_DEBUG_FN, "fn: disect_raw_packet");
 
   /* assign fixed header */
   pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
@@ -682,7 +682,7 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
       pkt->var_len = sizeof(struct connect_variable_header);
       /* validate reserved nibble */
       if (pkt->fixed->generic.reserved != 0x0 ) {
-        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+        log_std(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
             pkt->fixed->generic.reserved);
         ret = UMQTT_PACKET_ERROR;
       }
@@ -692,7 +692,7 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
       pkt->var_len = sizeof(struct connack_variable_header);
       /* validate reserved nibble */
       if (pkt->fixed->generic.reserved != 0x0 ) {
-        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+        log_std(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
             pkt->fixed->generic.reserved);
         ret = UMQTT_PACKET_ERROR;
       }
@@ -721,7 +721,7 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
       pkt->var_len = sizeof(struct generic_variable_header);
       /* validate reserved nibble */
       if (pkt->fixed->generic.reserved != 0x00 ) {
-        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+        log_std(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
             pkt->fixed->generic.reserved);
         ret = UMQTT_PACKET_ERROR;
       }
@@ -732,7 +732,7 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
       pkt->var_len = sizeof(struct generic_variable_header);
       /* validate reserved nibble */
       if (pkt->fixed->generic.reserved != 0x2 ) {
-        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+        log_std(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
             pkt->fixed->generic.reserved);
         ret = UMQTT_PACKET_ERROR;
       }
@@ -744,14 +744,14 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
       pkt->var_len = 0;
       /* validate reserved nibble */
       if (pkt->fixed->generic.reserved != 0x0 ) {
-        log_stderr(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
+        log_std(LOG_ERROR, "Malformed packet - reserved nibble: 0x%X",
             pkt->fixed->generic.reserved);
         ret = UMQTT_PACKET_ERROR;
       }
       break;
 
     default:
-      log_stderr(LOG_ERROR, "MQTT packet not supported: %s",
+      log_std(LOG_ERROR, "MQTT packet not supported: %s",
           pkt->fixed->generic.type);
       ret = UMQTT_PKT_NOT_SUPPORTED;
   }
@@ -759,8 +759,8 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
   /* check fixed and variable header sizes */
   if ((pkt->fix_len > sizeof(struct pkt_fixed_header)) ||
       ((pkt->var_len) >= pkt->len)) {
-    log_stderr(LOG_ERROR, "Malformed packet, invalid length");
-    log_stderr(LOG_ERROR, "Packet length: %zu Fixed header length %zu"
+    log_std(LOG_ERROR, "Malformed packet, invalid length");
+    log_std(LOG_ERROR, "Packet length: %zu Fixed header length %zu"
         " Variable header length: %zu Payload length: %zu",
         pkt->len, pkt->fix_len, pkt->var_len, pkt->var_len);
 
@@ -794,7 +794,7 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
  * \param n Number of bytes to move backwards
  */
 void memmove_back(uint8_t *mem, size_t delta, size_t n) {
-  log_stderr(LOG_DEBUG_FN, "fn: memmove_back");
+  log_std(LOG_DEBUG_FN, "fn: memmove_back");
   size_t i;
   if (mem) {
     for (i = 0; i <= n; i++) {
@@ -811,7 +811,7 @@ void memmove_back(uint8_t *mem, size_t delta, size_t n) {
  * \param len The length that should be encoded.
  */
 uint8_t required_remaining_len_bytes(unsigned int len) {
-  log_stderr(LOG_DEBUG_FN, "fn: required_remaining_length_bytes");
+  log_std(LOG_DEBUG_FN, "fn: required_remaining_length_bytes");
   uint8_t i = 0;
   do {
     len /= 128;
@@ -830,7 +830,7 @@ uint8_t required_remaining_len_bytes(unsigned int len) {
  * \param len The length that should be encoded.
  */
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
-  log_stderr(LOG_DEBUG_FN, "fn: encode_remaining_len");
+  log_std(LOG_DEBUG_FN, "fn: encode_remaining_len");
   uint8_t i = 0;
   do {
     pkt->fixed->remain_len[i] = len % 128;
@@ -855,7 +855,7 @@ void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len) {
  * \return The length that should be encoded.
  */
 unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: decode_remaining_len");
+  log_std(LOG_DEBUG_FN, "fn: decode_remaining_len");
   uint8_t i = 0;
   unsigned int len = 0;
   unsigned int product = 1;
@@ -864,7 +864,7 @@ unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
 
     product *= 128;
     if (product > MAX_REMAIN_LEN_PRODUCT) {
-      log_stderr(LOG_ERROR, "Malformed remaining length");
+      log_std(LOG_ERROR, "Malformed remaining length");
       return 0;
     }
 
@@ -882,10 +882,10 @@ unsigned int decode_remaining_len(struct mqtt_packet *pkt) {
  */
 uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len) {
-  log_stderr(LOG_DEBUG_FN, "fn: encode_utf8_string");
+  log_std(LOG_DEBUG_FN, "fn: encode_utf8_string");
 
   if (len > 0xfffe) {
-    log_stderr(LOG_ERROR, "String too long to be encoded as UTF8 string");
+    log_std(LOG_ERROR, "String too long to be encoded as UTF8 string");
     return 0;
   }
 
@@ -907,12 +907,12 @@ uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
  */
 uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str) {
   uint16_t len = 0;
-  log_stderr(LOG_DEBUG_FN, "fn: decode_utf8_string");
+  log_std(LOG_DEBUG_FN, "fn: decode_utf8_string");
 
   len = (uint16_t)(utf8_str->len_msb << 8) | utf8_str->len_lsb;
 
   if (len > 0xfffe) {
-    log_stderr(LOG_ERROR, "Malformed UTF8 string");
+    log_std(LOG_ERROR, "Malformed UTF8 string");
     return 0;
   }
 
@@ -939,7 +939,7 @@ uint16_t utf8_enc_str_size(struct utf8_enc_str *utf8) {
  * \param pkt The packet to free.
  */
 void free_packet(struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: free_packet");
+  log_std(LOG_DEBUG_FN, "fn: free_packet");
 
   if (pkt->raw.buf) {
     free(pkt->raw.buf);

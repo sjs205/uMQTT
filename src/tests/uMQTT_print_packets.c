@@ -32,50 +32,50 @@
 
 void print_struct_sizes() {
 
-  log_stdout(LOG_INFO, "\n\nThe following shows the compile-time sizes of a number of variables used:\n");
+  log_std(LOG_INFO, "\n\nThe following shows the compile-time sizes of a number of variables used:\n");
 
-  log_stdout(LOG_INFO, "UMQTT_DEFAULT_PKT_LEN \t\t\t\t\t\t%d\n", UMQTT_DEFAULT_PKT_LEN);
+  log_std(LOG_INFO, "UMQTT_DEFAULT_PKT_LEN \t\t\t\t\t\t%d\n", UMQTT_DEFAULT_PKT_LEN);
 
-  log_stdout(LOG_INFO, "sizeof(struct mqtt_packet): \t\t\t\t\t%zu bytes",
+  log_std(LOG_INFO, "sizeof(struct mqtt_packet): \t\t\t\t\t%zu bytes",
       sizeof(struct mqtt_packet));
-  log_stdout(LOG_INFO, "{");
-  log_stdout(LOG_INFO, "\tsizeof(struct pkt_fixed_header): \t\t\t%zu bytes",
+  log_std(LOG_INFO, "{");
+  log_std(LOG_INFO, "\tsizeof(struct pkt_fixed_header): \t\t\t%zu bytes",
       sizeof(struct pkt_fixed_header));
-  log_stdout(LOG_INFO, "\t{");
-  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_generic_fixed_header): \t%zu bytes",
+  log_std(LOG_INFO, "\t{");
+  log_std(LOG_INFO, "\t\tsizeof(struct pkt_generic_fixed_header): \t%zu bytes",
       sizeof(struct pkt_generic_fixed_header));
-  log_stdout(LOG_INFO, "\t\tsizeof(struct pkt_publish_fixed_header): \t%zu bytes",
+  log_std(LOG_INFO, "\t\tsizeof(struct pkt_publish_fixed_header): \t%zu bytes",
       sizeof(struct pkt_publish_fixed_header));
-  log_stdout(LOG_INFO, "\t}");
+  log_std(LOG_INFO, "\t}");
 
-  log_stdout(LOG_INFO, "\tsizeof(struct pkt_variable_header): \t\t\t%zu bytes",
+  log_std(LOG_INFO, "\tsizeof(struct pkt_variable_header): \t\t\t%zu bytes",
       sizeof(struct pkt_variable_header));
-  log_stdout(LOG_INFO, "\t{");
-  log_stdout(LOG_INFO, "\t\tsizeof(struct generic_variable_header): \t%zu bytes",
+  log_std(LOG_INFO, "\t{");
+  log_std(LOG_INFO, "\t\tsizeof(struct generic_variable_header): \t%zu bytes",
       sizeof(struct generic_variable_header));
-  log_stdout(LOG_INFO, "\t\tsizeof(struct connect_variable_header): \t%zu bytes",
+  log_std(LOG_INFO, "\t\tsizeof(struct connect_variable_header): \t%zu bytes",
       sizeof(struct connect_variable_header));
-  log_stdout(LOG_INFO, "\t\tsizeof(struct connack_variable_header): \t%zu bytes",
+  log_std(LOG_INFO, "\t\tsizeof(struct connack_variable_header): \t%zu bytes",
       sizeof(struct connack_variable_header));
-  log_stdout(LOG_INFO, "\t\tsizeof(struct publish_variable_header): \t%zu bytes",
+  log_std(LOG_INFO, "\t\tsizeof(struct publish_variable_header): \t%zu bytes",
       sizeof(struct publish_variable_header));
-  log_stdout(LOG_INFO, "\t}");
-  log_stdout(LOG_INFO, "\tsizeof(struct pkt_payload): \t\t\t\t%zu bytes",
+  log_std(LOG_INFO, "\t}");
+  log_std(LOG_INFO, "\tsizeof(struct pkt_payload): \t\t\t\t%zu bytes",
       sizeof(struct pkt_payload));
-  log_stdout(LOG_INFO, "\n\tsizeof(struct raw_pkt): \t\t\t\t%zu bytes",
+  log_std(LOG_INFO, "\n\tsizeof(struct raw_pkt): \t\t\t\t%zu bytes",
       sizeof(struct raw_pkt));
 
-  log_stdout(LOG_INFO, "\n\tsizeof(size_t fix_len): \t\t\t\t%zu bytes",
+  log_std(LOG_INFO, "\n\tsizeof(size_t fix_len): \t\t\t\t%zu bytes",
       sizeof(size_t));
-  log_stdout(LOG_INFO, "\tsizeof(size_t var_len): \t\t\t\t%zu bytes",
+  log_std(LOG_INFO, "\tsizeof(size_t var_len): \t\t\t\t%zu bytes",
       sizeof(size_t));
-  log_stdout(LOG_INFO, "\tsizeof(size_t pay_len): \t\t\t\t%zu bytes",
+  log_std(LOG_INFO, "\tsizeof(size_t pay_len): \t\t\t\t%zu bytes",
       sizeof(size_t));
-  log_stdout(LOG_INFO, "\tsizeof(size_t len):     \t\t\t\t%zu bytes\n",
+  log_std(LOG_INFO, "\tsizeof(size_t len):     \t\t\t\t%zu bytes\n",
       sizeof(size_t));
 
-  log_stdout(LOG_INFO, "}");
-  log_stdout(LOG_INFO, "\n\nsizeof(struct utf8_enc_str): \t\t\t\t\t%zu bytes",
+  log_std(LOG_INFO, "}");
+  log_std(LOG_INFO, "\n\nsizeof(struct utf8_enc_str): \t\t\t\t\t%zu bytes",
       sizeof(struct utf8_enc_str));
 
   return;

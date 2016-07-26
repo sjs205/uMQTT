@@ -168,7 +168,7 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
           if (optarg) {
             strcpy(clientid, optarg);
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The clientid flag should be followed by a clientid");
             print_usage();
             ret = UMQTT_ERROR;
@@ -190,7 +190,7 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
             /* set username flag */
             pkt->variable->connect.flags.user_flag = 1;
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The username flag should be followed by a topic");
             print_usage();
             ret = UMQTT_ERROR;
@@ -205,7 +205,7 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
             /* set password flag */
             pkt->variable->connect.flags.pass_flag = 1;
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The password flag should be followed by a topic");
             print_usage();
             ret = UMQTT_ERROR;
@@ -225,7 +225,7 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
             /* set will flag */
             pkt->variable->connect.flags.will_flag = 1;
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The will topic flag should be followed by a topic");
             print_usage();
             ret = UMQTT_ERROR;
@@ -240,7 +240,7 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
             /* set will flag */
             pkt->variable->connect.flags.will_flag = 1;
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The will message flag should be followed by a message");
             print_usage();
             ret = UMQTT_ERROR;
@@ -262,7 +262,7 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
             /* set will flag */
             pkt->variable->connect.flags.will_flag = 1;
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The will Qos flag should be followed by a QoS (0-3)");
             print_usage();
             ret = UMQTT_ERROR;
@@ -275,7 +275,7 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
           if (optarg) {
             pkt->variable->connect.keep_alive = (uint16_t)atoi(optarg);
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The will topic flag should be followed by a topic");
             print_usage();
             ret = UMQTT_ERROR;
@@ -289,20 +289,20 @@ umqtt_ret build_connect_pkt_getopts(int argc, char **argv,
   }
 
   if (clientid[0] ==  '\0') {
-    log_stdout(LOG_INFO,
+    log_std(LOG_INFO,
         "Automatically generating a clientID since none was specified");
   }
 
   if (pkt->variable->connect.flags.will_flag == 1) {
     if (will_topic[0] == '\0') {
-      log_stdout(LOG_INFO,
+      log_std(LOG_INFO,
         "A will topic must be specified when the will flag is set");
       ret = UMQTT_ERROR;
       goto end;
     }
 
     if (will_msg[0] == '\0') {
-      log_stdout(LOG_INFO,
+      log_std(LOG_INFO,
           "A will message must be specified when the will flag is set");
       ret = UMQTT_ERROR;
       goto end;
@@ -376,7 +376,7 @@ umqtt_ret build_publish_pkt_getopts(int argc, char **argv,
           if (optarg) {
             strcpy(topic, optarg);
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The topic flag should be followed by a topic");
             print_usage();
             ret = UMQTT_ERROR;
@@ -389,7 +389,7 @@ umqtt_ret build_publish_pkt_getopts(int argc, char **argv,
           if (optarg) {
             strcpy(msg, optarg);
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The message flag should be followed by a message");
             print_usage();
             ret = UMQTT_ERROR;
@@ -412,7 +412,7 @@ umqtt_ret build_publish_pkt_getopts(int argc, char **argv,
           if (optarg) {
             pkt->fixed->publish.qos = (0x03 & (uint8_t)atoi(optarg));
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The QoS flag should be followed by a QoS (0-3)");
             print_usage();
             ret = UMQTT_ERROR;
@@ -426,7 +426,7 @@ umqtt_ret build_publish_pkt_getopts(int argc, char **argv,
             pkt_id = (uint16_t)atoi(optarg);
             generate_packet_id(pkt_id);
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The packet identifier flag should be followed by a packet id");
             print_usage();
             ret = UMQTT_ERROR;
@@ -441,21 +441,21 @@ umqtt_ret build_publish_pkt_getopts(int argc, char **argv,
   }
 
   if (topic[0] == '\0') {
-    log_stdout(LOG_INFO,
+    log_std(LOG_INFO,
         "Automatically generating a topic since none was specified");
   }
 
   /* set publish variable header and message payload */
   ret = set_publish_variable_header(pkt, topic, strlen(topic));
   if (ret) {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Failed to assign PUBLISH packet variable header");
     goto end;
   }
 
   ret = init_packet_payload(pkt, PUBLISH, (uint8_t *)msg, strlen(msg));
   if (ret) {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Failed to assign PUBLISH packet payload");
     goto end;
   }
@@ -520,7 +520,7 @@ umqtt_ret build_un_subscribe_pkt_getopts(int argc, char **argv,
             }
 
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The topic flag should be followed by a topic");
             print_usage();
             ret = UMQTT_ERROR;
@@ -534,7 +534,7 @@ umqtt_ret build_un_subscribe_pkt_getopts(int argc, char **argv,
             if (optarg) {
               payload[pay_len - 1] = (0x03 & (uint8_t)atoi(optarg));
             } else {
-              log_stderr(LOG_ERROR,
+              log_std(LOG_ERROR,
                   "The QoS flag should be followed by a QoS (0-3)");
               print_usage();
               ret = UMQTT_ERROR;
@@ -542,7 +542,7 @@ umqtt_ret build_un_subscribe_pkt_getopts(int argc, char **argv,
             }
           } else {
             /* UNSUBSCRIBE */
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The QoS flag has no effect with the UNSUBSCRIBE packet type");
             print_usage();
             ret = UMQTT_ERROR;
@@ -557,7 +557,7 @@ umqtt_ret build_un_subscribe_pkt_getopts(int argc, char **argv,
             generate_packet_id(pkt_id);
 
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The packet identifier flag should be followed by a packet id");
             print_usage();
             ret = UMQTT_ERROR;
@@ -574,14 +574,14 @@ umqtt_ret build_un_subscribe_pkt_getopts(int argc, char **argv,
 /* set subscribe variable header and message payload */
   ret = init_packet_variable_header(pkt, pkt->fixed->generic.type);
   if (ret) {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Failed to assign packet variable header");
     goto end;
   }
 
   ret = init_packet_payload(pkt, SUBSCRIBE, (uint8_t *)&payload, pay_len);
   if (ret) {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Failed to assign SUBSCRIBE packet payload");
     goto end;
   }
@@ -644,14 +644,14 @@ umqtt_ret build_generic_pkt_getopts(int argc, char **argv,
             if (optarg) {
               pkt_ret = (0x83 & (uint8_t)atoi(optarg));
             } else {
-              log_stderr(LOG_ERROR,
+              log_std(LOG_ERROR,
                   "The return flag should be followed by a return code");
               print_usage();
               ret = UMQTT_ERROR;
               goto end;
             }
           } else {
-              log_stderr(LOG_ERROR, "The return flag can only be used"
+              log_std(LOG_ERROR, "The return flag can only be used"
                   " with SUBACK or CONNACK packets");
           }
           break;
@@ -669,7 +669,7 @@ umqtt_ret build_generic_pkt_getopts(int argc, char **argv,
             pkt_id = (uint16_t)atoi(optarg);
 
           } else {
-            log_stderr(LOG_ERROR,
+            log_std(LOG_ERROR,
                 "The packet identifier flag should be followed by a packet id");
             print_usage();
             ret = UMQTT_ERROR;
@@ -685,7 +685,7 @@ umqtt_ret build_generic_pkt_getopts(int argc, char **argv,
 
   ret = init_packet_variable_header(pkt, pkt->fixed->generic.type);
   if (ret) {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Failed to assign packet variable header");
     goto end;
   }
@@ -709,7 +709,7 @@ umqtt_ret build_generic_pkt_getopts(int argc, char **argv,
   ret = init_packet_payload(pkt, pkt->fixed->generic.type, (uint8_t *)&payload,
       pay_len);
   if (ret) {
-    log_stderr(LOG_ERROR,
+    log_std(LOG_ERROR,
         "Failed to assign packet payload");
     goto end;
   }
@@ -730,7 +730,7 @@ int main(int argc, char **argv) {
   }
 
   if (!pkt) {
-    log_stderr(LOG_ERROR, "Constructing headers: Packet creation failed");
+    log_std(LOG_ERROR, "Constructing headers: Packet creation failed");
     ret = UMQTT_ERROR;
     goto free;
   } else {
@@ -755,7 +755,7 @@ int main(int argc, char **argv) {
   }
 
   if (ret) {
-    log_stderr(LOG_ERROR, "Building packet: Packet creation failed");
+    log_std(LOG_ERROR, "Building packet: Packet creation failed");
     goto free;
   }
 

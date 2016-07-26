@@ -47,7 +47,7 @@ int main() {
   init_linux_socket_connection(&conn, MQTT_BROKER_IP,
       sizeof(MQTT_BROKER_IP), 1883);
   if (!conn) {
-    log_stderr(LOG_ERROR, "Initialising connection");
+    log_std(LOG_ERROR, "Initialising connection");
     return -1;
   }
 
@@ -55,10 +55,10 @@ int main() {
 
   ret = broker_connect(conn);
   if (ret) {
-    log_stderr(LOG_ERROR, "Initialising broker connection");
+    log_std(LOG_ERROR, "Initialising broker connection");
     return -1;
   } else {
-    log_stdout(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
+    log_std(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
   }
 
   /* publish packet */
@@ -66,14 +66,14 @@ int main() {
       (uint8_t *)"uMQTT test PUBLISH packet",
       sizeof("uMQTT test PUBLISH packet"));
   if (!pub_pkt) {
-    log_stderr(LOG_ERROR, "Initialising PUBLISH packet");
+    log_std(LOG_ERROR, "Initialising PUBLISH packet");
     goto free;
   }
 
   print_packet_hex_debug(pub_pkt);
   ret = conn->send_method(conn, pub_pkt);
   if (ret) {
-    log_stderr(LOG_ERROR, "Sending PUBLISH message failed");
+    log_std(LOG_ERROR, "Sending PUBLISH message failed");
     goto free;
   }
 
