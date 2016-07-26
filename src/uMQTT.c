@@ -53,8 +53,6 @@ umqtt_ret init_packet(struct mqtt_packet **pkt_p) {
   pkt->raw.len = UMQTT_DEFAULT_PKT_LEN;
   *pkt_p = pkt;
 
-  log_std(LOG_DEBUG_FN, "New packet with %zu bytes allocated", pkt->raw.len);
-
   return UMQTT_SUCCESS;
 }
 
@@ -74,7 +72,7 @@ umqtt_ret init_packet_fixed_header(struct mqtt_packet *pkt,
   pkt->fix_len =
     1 + MAX_REMAIN_LEN_BYTES;
 
-  /* alloate fixed header */
+  /* allocate fixed header */
   pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
 
   pkt->fixed->generic.type = type;
@@ -673,6 +671,15 @@ umqtt_ret disect_raw_packet(struct mqtt_packet *pkt) {
   pkt->fix_len = 1 + required_remaining_len_bytes(pkt->len);
 
   pkt->len += pkt->fix_len;
+
+  if (pkt->raw.len < pkt->len) {
+    log_std(LOG_ERROR,
+        "Packet larger than buffer pkt->len: %zu pkt->raw.len %zu",
+        pkt->len, pkt->raw.len);
+    return UMQTT_PACKET_ERROR;
+  }
+
+
 
   /* assign variable header */
   pkt->variable = (struct pkt_variable_header *)&pkt->raw.buf[pkt->fix_len];

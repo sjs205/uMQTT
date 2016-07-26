@@ -160,7 +160,7 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   pkt->len = read(skt->sockfd, pkt->raw.buf, pkt->raw.len);
-  if (pkt->raw.len < 0) {
+  if (pkt->len < 0) {
     log_std(LOG_ERROR, "reading from socket");
     ret = UMQTT_RECEIVE_ERROR;
   } else {
@@ -168,6 +168,7 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
     log_std(LOG_DEBUG, "RX: %s", get_type_string(pkt->fixed->generic.type));
     print_packet_raw(pkt);
 
+    /* precess return from disect_raw_packet */
     if (ret) {
       log_std(LOG_ERROR, "Failed to decode %s packet.",
           get_type_string(pkt->fixed->generic.type));
