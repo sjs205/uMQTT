@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(topic, optarg);
           } else {
-            log_std(LOG_ERROR, "The topic flag should be followed by a topic.");
+            LOG_ERROR("The topic flag should be followed by a topic.");
             return print_usage();
           }
           break;
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(broker_ip, optarg);
           } else {
-            log_std(LOG_ERROR, "The broker flag should be followed by an IP address.");
+            LOG_ERROR("The broker flag should be followed by an IP address.");
             return print_usage();
           }
           break;
@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             broker_port = *optarg;
           } else {
-            log_std(LOG_ERROR, "The port flag should be followed by a port.");
+            LOG_ERROR("The port flag should be followed by a port.");
             return print_usage();
           }
           break;
@@ -160,8 +160,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(clientid, optarg);
           } else {
-            log_std(LOG_ERROR,
-                "The clientid flag should be followed by a clientid");
+            LOG_ERROR("The clientid flag should be followed by a clientid");
             return print_usage();
           }
           break;
@@ -173,11 +172,11 @@ int main(int argc, char **argv) {
 
   struct broker_conn *conn;
 
-  log_std(LOG_INFO, "Initialising socket connection");
+  LOG_INFO("Initialising socket connection");
 
   init_linux_socket_connection(&conn, broker_ip, sizeof(broker_ip), broker_port);
   if (!conn) {
-    log_std(LOG_ERROR, "Initialising socket connection");
+    LOG_ERROR("Initialising socket connection");
     return -1;
   }
 
@@ -185,26 +184,26 @@ int main(int argc, char **argv) {
     broker_set_clientid(conn, clientid, sizeof(clientid));
   }
 
-  log_std(LOG_INFO, "Connecting to broker");
+  LOG_INFO("Connecting to broker");
 
   struct linux_broker_socket *skt = '\0';
   if ((ret = broker_connect(conn))) {
-    log_std(LOG_ERROR, "Initialising socket connection");
+    LOG_ERROR("Initialising socket connection");
     free_connection(conn);
     return ret;
   } else {
     skt = (struct linux_broker_socket *)conn->context;
-    log_std(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
+    LOG_INFO("Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
   }
 
-  log_std(LOG_INFO, "Subscribing to the following topics:");
-  log_std(LOG_INFO, "Topic: %s", topic);
+  LOG_INFO("Subscribing to the following topics:");
+  LOG_INFO("Topic: %s", topic);
 
   /* Find actual length of topic and subscribe */
   const char *end = strchr(topic, '\0');
   if (!end || (ret = broker_subscribe(conn, topic, end - topic))) {
 
-    log_std(LOG_ERROR, "Subscribing to topic.");
+    LOG_ERROR("Subscribing to topic.");
     ret = UMQTT_ERROR;
     goto free;
   }
@@ -212,7 +211,7 @@ int main(int argc, char **argv) {
   /* Start listening for packets */
   struct mqtt_packet *pkt = NULL;
   if (init_packet(&pkt)) {
-    log_std(LOG_ERROR, "Initialising packet");
+    LOG_ERROR("Initialising packet");
     ret = UMQTT_ERROR;
     goto free;
   }
