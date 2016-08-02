@@ -80,8 +80,9 @@ static int print_usage() {
 
 int main(int argc, char **argv) {
 
-  int ret;
-  int c, option_index = 0, detail = 0;
+  umqtt_ret ret;
+  int c, option_index = 0;
+  uint8_t detail = 0, hex = 0;
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char broker_ip[16] = MQTT_BROKER_IP;
   int broker_port = MQTT_BROKER_PORT;
@@ -93,6 +94,7 @@ int main(int argc, char **argv) {
     {"help",   no_argument,             0, 'h'},
     {"verbose", required_argument,      0, 'v'},
     {"detail", no_argument,             0, 'd'},
+    {"hex", no_argument,                0, 'x'},
     {"topic", required_argument,        0, 't'},
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
@@ -103,7 +105,8 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hdv:t:b:p:c:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hdxv:t:b:p:c:", long_options,
+            &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -115,6 +118,11 @@ int main(int argc, char **argv) {
           if (optarg) {
             set_log_level_str(optarg);
           }
+          break;
+
+        case 'x':
+          /* set hex output */
+          hex = 1;
           break;
 
         case 'd':
@@ -214,13 +222,18 @@ int main(int argc, char **argv) {
   }
 
   while (1) {
-    ret = conn->receive_method(conn, pkt);
+    LOG_DEBUG("Packet counts: Successful: %d Failed: %d, Publish: %d",
+        conn->success_count, conn->fail_count, conn->publish_count);
 
+    ret = conn->receive_method(conn, pkt);
     if (!ret) {
       if (detail) {
         print_packet_detailed(pkt);
       } else {
         print_publish_packet(pkt);
+      }
+      if (hex) {
+        print_packet_raw(pkt);
       }
     }
   }
