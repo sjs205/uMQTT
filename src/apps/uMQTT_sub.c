@@ -222,6 +222,8 @@ int main(int argc, char **argv) {
   }
 
   while (1) {
+    /* packet border */
+    LOG_INFO("------------------------------------------------------------");
     LOG_DEBUG("Packet counts: Successful: %d Failed: %d, Publish: %d",
         conn->success_count, conn->fail_count, conn->publish_count);
 
