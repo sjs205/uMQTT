@@ -33,10 +33,6 @@
 #include "uMQTT_linux_client.h"
 #include "../inc/log.h"
 
-/* ip of test.mosquitto.org */
-#define MQTT_BROKER_IP        "85.119.83.194\0"
-#define MQTT_BROKER_PORT      1883
-
 #define MAX_TOPIC_LEN         1024
 #define MAX_MSG_LEN           1024
 
@@ -46,7 +42,8 @@
 static int print_usage() {
 
   fprintf(stderr,
-      "uMQTT_pub is an application that connects to an MQTT broker and sends a user defined\n"
+      "uMQTT_pub is an application that connects to an MQTT broker and sends "
+      "a user defined\n"
       "publish pocket before disconnecting\n"
       ""
       "Usage: uMQTT_pub [options] -m <PUBLISH message>\n"
@@ -60,8 +57,9 @@ static int print_usage() {
       " -r [--retain]            : Set the retain flag\n"
       "\n"
       "Broker options:\n"
-      " -b [--broker] <broker-IP>: Change the default broker IP - only IP addresses are\n"
-      "                            currently supported. Default: test.mosquitto.org\n"
+      " -b [--broker] <broker-IP>: Change the default broker IP\n"
+      "                             - only IP addresses are\n"
+      "                            currently supported. Default: localhost\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
       " -c [--clientid] <id>     : Change the default clientid\n"
       "\n"
@@ -137,7 +135,8 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:f:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:f:", long_options,
+            &option_index)) != -1) {
 
       switch (c) {
         case 'h':

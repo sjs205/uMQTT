@@ -28,6 +28,9 @@
 #include "uMQTT.h"
 #include "uMQTT_client.h"
 
+#define MQTT_BROKER_IP        "127.0.0.1"
+#define MQTT_BROKER_PORT      1883
+
 /**
  * \brief Struct to store an MQTT broker socket connection.
  * \param ip The ip address of the broker.

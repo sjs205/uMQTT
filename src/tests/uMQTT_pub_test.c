@@ -32,11 +32,6 @@
 #include "uMQTT_helper.h"
 #include "../inc/log.h"
 
-/* ip of test.mosquitto.org - need to perform dns lookup
-   using gethostbyname */
-#define MQTT_BROKER_IP        "85.119.83.194"
-#define MQTT_BROKER_PORT      1883
-
 int main() {
   log_level(LOG_DEBUG);
 

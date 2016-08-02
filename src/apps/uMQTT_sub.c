@@ -34,10 +34,6 @@
 #include "uMQTT_linux_client.h"
 #include "../inc/log.h"
 
-/* ip of test.mosquitto.org */
-#define MQTT_BROKER_IP        "85.119.83.194\0"
-#define MQTT_BROKER_PORT      1883
-
 #define MAX_TOPIC_LEN         1024
 #define MAX_MSG_LEN           1024
 
@@ -60,12 +56,13 @@ static int print_usage() {
       "Broker options:\n"
       " -b [--broker] <broker-IP>: Change the default broker IP - only IP\n"
       "                            addresses are currently supported.\n"
-      "                            Default ip: test.mosquitto.org\n"
+      "                            Default ip: localhost\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
       "\n"
       "Output options:\n"
       " -d [--detail]            : Output detailed packet information\n"
       "                            Default: output publish packet summary\n"
+      " -x [--hex]               : Output hex packet\n"
       "\n"
       "Debug options:\n"
       " -v [--verbose] <LEVEL>   : set verbose level to LEVEL\n"
