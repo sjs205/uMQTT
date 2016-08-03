@@ -73,6 +73,7 @@ static int print_usage() {
       "                                 INFO (default)\n"
       "                                 DEBUG\n"
       "                                 DEBUG_FN\n"
+      " -e [--error]              : Exit on first error\n"
       "\n");
 
   return 0;
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
 
   umqtt_ret ret;
   int c, option_index = 0;
-  uint8_t detail = 0, hex = 0;
+  uint8_t detail = 0, hex = 0, error = 0;
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char broker_ip[16] = MQTT_BROKER_IP;
   int broker_port = MQTT_BROKER_PORT;
@@ -95,6 +96,7 @@ int main(int argc, char **argv) {
     {"verbose", required_argument,      0, 'v'},
     {"detail", no_argument,             0, 'd'},
     {"hex", no_argument,                0, 'x'},
+    {"error", no_argument,              0, 'e'},
     {"topic", required_argument,        0, 't'},
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
@@ -105,7 +107,7 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hdxv:t:b:p:c:", long_options,
+    if ((c = getopt_long(argc, argv, "hdexv:t:b:p:c:", long_options,
             &option_index)) != -1) {
 
       switch (c) {
@@ -148,6 +150,11 @@ int main(int argc, char **argv) {
             LOG_ERROR("The broker flag should be followed by an IP address.");
             return print_usage();
           }
+          break;
+
+        case 'e':
+          /* Break on error */
+          error = 1;
           break;
 
         case 'p':
@@ -237,6 +244,8 @@ int main(int argc, char **argv) {
       if (hex) {
         print_packet_raw(pkt);
       }
+    } else if (error) {
+      break;
     }
   }
 
