@@ -74,6 +74,7 @@ static int print_usage() {
       "                                 INFO (default)\n"
       "                                 DEBUG\n"
       "                                 DEBUG_FN\n"
+      " -i [--ignore]            : ignore packet errors\n"
       " -t [--test]              : run unit tests\n"
       "\n");
 
@@ -157,7 +158,7 @@ umqtt_ret hex_char_to_uint(char *in, uint8_t *out) {
 
       return UMQTT_SUCCESS;
     }
-  } 
+  }
   return UMQTT_ERROR;
 }
 
@@ -312,6 +313,7 @@ int main(int argc, char **argv) {
 
   umqtt_ret ret = UMQTT_SUCCESS;
   int c, option_index = 0;
+  uint8_t ignore_pkt_errs = 0;
   uint8_t cl_pkt = 0;
   char filename[UMQTT_MAX_FILENAME_LEN] = "\0";
   size_t file_len = UMQTT_MAX_FILE_SIZE;
@@ -332,6 +334,7 @@ int main(int argc, char **argv) {
     {"hex", no_argument,                0, 'x'},
     {"binary", no_argument,             0, 'b'},
     {"file", required_argument,         0, 'f'},
+    {"ignore", no_argument,             0, 'i'},
     {"test", no_argument,               0, 't'},
     {"verbose", required_argument,      0, 'v'},
     {0, 0, 0, 0}
@@ -340,7 +343,8 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "bhtxf:p:v:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "bhtxif:p:v:", long_options,
+            &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -372,6 +376,11 @@ int main(int argc, char **argv) {
             log_std(LOG_ERROR, "Binary input is not currently supported");
             ret = print_usage();
             goto cleanup;
+          break;
+
+        case 'i':
+          /* Ignore packet errors */
+          ignore_pkt_errs = 1;
           break;
 
         case 'x':
@@ -449,33 +458,25 @@ int main(int argc, char **argv) {
       /* update index */
       line = eol + 1;
 
-      /* print packet */
-      ret = disect_raw_packet(pkt);
-      if (ret) {
-        log_std(LOG_ERROR, "Failed to decode %s packet.",
-            get_type_string(pkt->fixed->generic.type));
-      } else {
-        print_packet_detailed(pkt);
-        print_packet_hex_debug(pkt);
-      }
     }
   } else {
-    /* expect packet in -p argument */
-
-
     /* process hex packet - need to add binary input */
     pkt->raw.len = hex_str_to_uint((char *)pkt_buf,
         strlen((const char *)pkt_buf), pkt->raw.buf);
+  }
 
-    ret = disect_raw_packet(pkt);
-    if (ret) {
-      log_std(LOG_ERROR, "Failed to decode %s packet.",
-          get_type_string(pkt->fixed->generic.type));
-    } else {
-      print_packet_detailed(pkt);
-      print_packet_hex_debug(pkt);
+  /* print packet */
+  ret = disect_raw_packet(pkt);
+  if (ret) {
+    log_std(LOG_ERROR, "Failed to decode %s packet.",
+        get_type_string(pkt->fixed->generic.type));
+    if (!ignore_pkt_errs) {
+      goto cleanup;
     }
   }
+
+  print_packet_detailed(pkt);
+  print_packet_hex_debug(pkt);
 
 cleanup:
   free_packet(pkt);
