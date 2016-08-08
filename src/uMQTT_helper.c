@@ -442,11 +442,7 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
       LOG_INFO("Topic: %s",
           (buf[0] == '\0' ? NO_TOPIC_STRING : buf));
 
-
-      strncpy(buf, (char *)&pkt->payload->data, pkt->pay_len);
-      buf[pkt->pay_len] = '\0';
-      LOG_INFO("Message:\n%s",
-          (buf[0] == '\0' ? NO_MESSAGE_STRING : buf));
+      LOG_INFO("Message:\n%.*s", pkt->pay_len, &pkt->payload->data);
       break;
 
     case PUBREL:
@@ -544,18 +540,18 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
 void print_publish_packet(struct mqtt_packet *pkt) {
 
   if (pkt->fixed->generic.type == PUBLISH) {
-    char buf[1024];
-
+    /* Print topic */
     uint16_t len = (uint16_t)((pkt->variable->publish.topic.len_msb << 8)
         | (pkt->variable->publish.topic.len_lsb));
-    strncpy(buf, &pkt->variable->publish.topic.utf8_str, len);
-    buf[len] = '\0';
-    LOG_INFO("PUBLISH Topic: %s",
-        (buf[0] == '\0' ? NO_TOPIC_STRING : buf));
+    if (len) {
+      LOG_INFO("PUBLISH Topic: %.*s",
+          len, &pkt->variable->publish.topic.utf8_str);
+    } else {
+      LOG_INFO("PUBLISH Topic: %s", NO_TOPIC_STRING);
+    }
 
-    strncpy(buf, (char *)&pkt->payload->data, pkt->pay_len);
-    buf[pkt->pay_len] = '\0';
-    LOG_INFO("%s", buf);
+    /* Print message */
+    LOG_INFO("Message:\n%.*s", pkt->pay_len, &pkt->payload->data);
   }
 
   return;

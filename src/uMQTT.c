@@ -499,24 +499,25 @@ umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len) {
   LOG_DEBUG_FN("fn: resize_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
+  uint8_t *buf = NULL;
 
-  uint8_t *buf = realloc((*pkt_p)->raw.buf, len * sizeof(uint8_t));
+  buf = realloc((*pkt_p)->raw.buf, len * sizeof(uint8_t));
   if (!buf) {
     LOG_ERROR("Packet resize failed");
     ret = UMQTT_MEM_ERROR;
   } else {
+    (*pkt_p)->raw.buf = buf;
 
     if ((*pkt_p)->raw.len < len) {
-      memset(&(*pkt_p)->raw.buf[(*pkt_p)->raw.len + 1], 0,
+      memset(&(*pkt_p)->raw.buf[(*pkt_p)->raw.len], 0,
           len - (*pkt_p)->raw.len);
     }
     (*pkt_p)->raw.len = len;
-    (*pkt_p)->raw.buf = buf;
 
     /* ensure packet is aligned with raw packet */
     realign_packet(*pkt_p);
 
-    LOG_DEBUG_FN("Packet resize sucessfull, new length: %zu", len);
+    LOG_DEBUG("Packet resize sucessfull, new length: %zu", len);
   }
 
   return ret;

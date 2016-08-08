@@ -58,11 +58,13 @@ static int print_usage() {
       "                            addresses are currently supported.\n"
       "                            Default ip: localhost\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
+      " -c [--clientid] <id>     : Change the default clientid\n"
       "\n"
       "Output options:\n"
       " -d [--detail]            : Output detailed packet information\n"
       "                            Default: output publish packet summary\n"
       " -x [--hex]               : Output hex packet\n"
+      " -C [--counts]            : Print packet counts\n"
       "\n"
       "Debug options:\n"
       " -v [--verbose] <LEVEL>   : set verbose level to LEVEL\n"
@@ -83,7 +85,7 @@ int main(int argc, char **argv) {
 
   umqtt_ret ret;
   int c, option_index = 0;
-  uint8_t detail = 0, hex = 0, error = 0;
+  uint8_t detail = 0, hex = 0, error = 0, counts = 0;
   char topic[MAX_TOPIC_LEN] = UMQTT_DEFAULT_TOPIC;
   char broker_ip[16] = MQTT_BROKER_IP;
   int broker_port = MQTT_BROKER_PORT;
@@ -96,6 +98,7 @@ int main(int argc, char **argv) {
     {"verbose", required_argument,      0, 'v'},
     {"detail", no_argument,             0, 'd'},
     {"hex", no_argument,                0, 'x'},
+    {"counts", no_argument,             0, 'C'},
     {"error", no_argument,              0, 'e'},
     {"topic", required_argument,        0, 't'},
     {"broker", required_argument,       0, 'b'},
@@ -107,7 +110,7 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hdexv:t:b:p:c:", long_options,
+    if ((c = getopt_long(argc, argv, "hCdexv:t:b:p:c:", long_options,
             &option_index)) != -1) {
 
       switch (c) {
@@ -125,6 +128,11 @@ int main(int argc, char **argv) {
         case 'x':
           /* set hex output */
           hex = 1;
+          break;
+
+        case 'C':
+          /* print packet counts */
+          counts = 1;
           break;
 
         case 'd':
@@ -211,13 +219,12 @@ int main(int argc, char **argv) {
   LOG_INFO("Subscribing to the following topics:");
   LOG_INFO("Topic: %s", topic);
 
-  /* Find actual length of topic and subscribe */
+  /* Find length of topic and subscribe */
   const char *end = strchr(topic, '\0');
   if (!end || (ret = broker_subscribe(conn, topic, end - topic))) {
 
     LOG_ERROR("Subscribing to topic.");
-    ret = UMQTT_ERROR;
-    goto free;
+    return UMQTT_ERROR;
   }
 
   /* Start listening for packets */
@@ -231,8 +238,10 @@ int main(int argc, char **argv) {
   while (1) {
     /* packet border */
     LOG_INFO("------------------------------------------------------------");
-    LOG_DEBUG("Packet counts: Successful: %d Failed: %d, Publish: %d",
-        conn->success_count, conn->fail_count, conn->publish_count);
+    if (counts) {
+      LOG_INFO("Packet counts: Successful: %d Failed: %d, Publish: %d",
+          conn->success_count, conn->fail_count, conn->publish_count);
+    }
 
     ret = conn->receive_method(conn, pkt);
     if (!ret) {

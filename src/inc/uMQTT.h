@@ -33,6 +33,7 @@
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
 #define UMQTT_DEFAULT_QOS         0
 
+#define MQTT_MIN_PKT_LEN          2
 #define MQTT_MAX_FIXED_HDR_LENGTH 5
 #define MQTT_CLIENTID_MAX_LEN     23
 #define UTF8_ENC_STR_MAX_LEN      65535

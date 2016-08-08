@@ -316,7 +316,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     ret = UMQTT_CONNECT_ERROR;
   }
 
-  return UMQTT_SUCCESS;
+  return ret;
 }
 
 /**
@@ -396,9 +396,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
       if (conn->proc && conn->proc->publish_method) {
         ret = conn->proc->publish_method(conn, pkt);
 
-      } else {
-
-        print_packet_hex_debug(pkt);
       }
       break;
 

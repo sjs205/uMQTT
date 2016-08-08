@@ -95,11 +95,15 @@ struct mqtt_process_methods {
  * \param subs Array of pointer to SUBSCRIBE/SUBACK packets.
  * \param sub_count final packet in subs array.
  * \param resp Point to a packet awaiting a response.
+ * \param publish_count The number of publish packets received.
+ * \param success_count The number of packets sucessfully decoded.
+ * \param fail_count The number of packets discarded due to errors.
  * \param connect_method Function pointer to the connect method.
  * \param disconnect_method Function pointer to the disconnect method.
  * \param send_method Function pointer to the send method.
  * \param receive_method Function pointer to the receive method.
- * \param free_method Fuction to free the connect method and related context struct.
+ * \param free_method Fuction to free the connect method and related context
+ *          struct.
  */
 struct broker_conn {
   struct mqtt_client client;
@@ -111,6 +115,10 @@ struct broker_conn {
   uint8_t sub_count;
 
   struct mqtt_packet *resp;
+
+  long int publish_count;
+  long int success_count;
+  long int fail_count;
 
   umqtt_ret (*connect_method)(struct broker_conn *);
   umqtt_ret (*disconnect_method)(struct broker_conn *);

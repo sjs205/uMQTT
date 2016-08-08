@@ -154,31 +154,96 @@ umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \return Number of bytes read.
  */
 umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_std(LOG_DEBUG_FN, "fn: read_socket_packet");
+  LOG_DEBUG_FN("fn: read_socket_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
+  ssize_t len = 0;
+  size_t read_len = 0;
+#if DEBUG
+  static ssize_t largest = 0;
+#endif
+
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
-  pkt->len = read(skt->sockfd, pkt->raw.buf, pkt->raw.len);
-  if (pkt->len < 0) {
-    log_std(LOG_ERROR, "reading from socket");
+  /* Peek the packet fixed header to determine the packet length */
+  do {
+    len = recv(skt->sockfd, pkt->raw.buf, sizeof(struct pkt_fixed_header),
+        MSG_PEEK);
+  } while (len < MQTT_MIN_PKT_LEN && len > 0);
+
+  if (len == 0) {
+    /* Possibly disconnected from broker */
     ret = UMQTT_RECEIVE_ERROR;
-  } else {
-    ret = disect_raw_packet(pkt);
-    log_std(LOG_DEBUG, "RX: %s", get_type_string(pkt->fixed->generic.type));
+    goto exit;
+  }
+
+  pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
+
+  /* Get size of packet */
+  pkt->len = decode_remaining_len(pkt);
+  pkt->len += required_remaining_len_bytes(pkt->len) + 1;
+  LOG_DEBUG("Detected packet length: %zu", pkt->len);
+
+#if DEBUG
+  if (pkt->len > largest) {
+    largest = pkt->len;
+  }
+  LOG_DEBUG("Largest packet detected: %zu", largest);
+#endif
+
+  if (pkt->len > pkt->raw.len) {
+    LOG_DEBUG("Resizing packet from: %zu to: %zu bytes", pkt->raw.len, pkt->len);
+    ret = resize_packet(&pkt, pkt->len);
+    if (ret) {
+      goto exit;
+    }
+  }
+
+  /* Ensure we read all bytes of the packet */
+  while (read_len < pkt->len) {
+    len = 0;
+    len = recv(skt->sockfd, pkt->raw.buf + read_len, pkt->len - read_len , 0);
+    if (len < 0) {
+      LOG_ERROR("Reading from socket %s", strerror(errno));
+      ret = UMQTT_RECEIVE_ERROR;
+      break;
+    }
+
+    read_len += len;
+    LOG_DEBUG("Bytes expected: %zu, received: %zu, total: %zu", pkt->len,
+        len, read_len);
+  }
+
+  /* Ensure read was sucessful */
+  if (!ret && read_len >= MQTT_MIN_PKT_LEN) {
+
+    pkt->len = read_len;
     print_packet_raw(pkt);
 
-    /* precess return from disect_raw_packet */
+    ret = disect_raw_packet(pkt);
     if (ret) {
-      log_std(LOG_ERROR, "Failed to decode %s packet.",
+      LOG_ERROR("Failed to decode %s packet.",
           get_type_string(pkt->fixed->generic.type));
+      conn->fail_count++;
+
     } else {
-      /* can we process the message? */
+      LOG_DEBUG("RX: %s - %zu bytes",
+          get_type_string(pkt->fixed->generic.type), pkt->len);
+
+      /* Update packet counts */
+      conn->success_count++;
+      if (pkt->fixed->generic.type == PUBLISH) {
+        conn->publish_count++;
+      }
+
+      /* Can we process the message? */
       if (conn->process_method) {
         ret = conn->process_method(conn, pkt);
       }
     }
   }
+
+exit:
   return ret;
 }
 
