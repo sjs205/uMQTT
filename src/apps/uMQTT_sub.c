@@ -246,12 +246,12 @@ int main(int argc, char **argv) {
     ret = conn->receive_method(conn, pkt);
     if (!ret) {
       if (detail) {
-        print_packet_detailed(pkt);
+        print_packet_detailed_info(pkt);
       } else {
-        print_publish_packet(pkt);
+        print_publish_packet_info(pkt);
       }
       if (hex) {
-        print_packet_raw(pkt);
+        print_packet_raw_debug(pkt);
       }
     } else if (error) {
       break;

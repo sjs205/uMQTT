@@ -763,9 +763,9 @@ int main(int argc, char **argv) {
   finalise_packet(pkt);
 
   /* print */
-  print_packet_detailed(pkt);
+  print_packet_detailed_info(pkt);
   print_packet_hex_debug(pkt);
-  print_packet_raw(pkt);
+  print_packet_raw_debug(pkt);
 
 free:
   if (pkt) {

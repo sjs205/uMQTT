@@ -258,73 +258,80 @@ char *get_qos_string(qos_t qos) {
  * \param ptr The memory to start printing.
  * \param len The number of bytes to print.
  */
-void print_memory_bytes_hex(void *ptr, size_t len) {
-  size_t i;
+void print_memory_bytes_hex_debug(void *ptr, size_t len) {
+  if (DEBUG)
+  {
+    size_t i;
 
-  char buf[5 * len];
-  buf[0] = '\0';
+    char buf[5 * len];
+    buf[0] = '\0';
 
-  char tbuf[10] = "\0";
+    char tbuf[10] = "\0";
 
-  LOG_DEBUG("%zu bytes starting at address %p", len, &ptr);
-  for (i = 0; i < len; i++) {
-    sprintf(tbuf, "0x%02X ", ((uint8_t *)ptr)[i]);
-    strcat(buf, tbuf);
+    LOG_DEBUG("%zu bytes starting at address %p", len, &ptr);
+    for (i = 0; i < len; i++) {
+      sprintf(tbuf, "0x%02X ", ((uint8_t *)ptr)[i]);
+      strcat(buf, tbuf);
+    }
+    LOG_DEBUG("%s", buf);
   }
-  LOG_DEBUG("%s", buf);
-
   return;
 }
 
 /**
- * \brief Function to print a packet.
+ * \brief Function to print a packet on LOG_DEBUG.
  * \param pkt Pointer to the packet to be printed
  */
 void print_packet_hex_debug(struct mqtt_packet *pkt) {
 
-  LOG_DEBUG("%s Packet Type:", get_type_string(pkt->fixed->generic.type));
+  if (DEBUG) {
+    LOG_DEBUG("%s Packet Type:", get_type_string(pkt->fixed->generic.type));
 
-  LOG_DEBUG("Fixed header:");
-  LOG_DEBUG("Length: %zu", pkt->fix_len);
-  print_memory_bytes_hex((void *)pkt->fixed, pkt->fix_len);
+    LOG_DEBUG("Fixed header:");
+    LOG_DEBUG("Length: %zu", pkt->fix_len);
+    print_memory_bytes_hex_debug((void *)pkt->fixed, pkt->fix_len);
 
-  if (pkt->var_len) {
-    LOG_DEBUG("Variable header:");
-    LOG_DEBUG("Length: %zu", pkt->var_len);
-    /* print variable header with oversized packet guard */
-    print_memory_bytes_hex((void *)pkt->variable,
-        (pkt->var_len >= pkt->len) ? pkt->len : pkt->var_len);
-  } else {
-    LOG_DEBUG("No Variable header.");
-  }
+    if (pkt->var_len) {
+      LOG_DEBUG("Variable header:");
+      LOG_DEBUG("Length: %zu", pkt->var_len);
+      /* print variable header with oversized packet guard */
+      print_memory_bytes_hex_debug((void *)pkt->variable,
+          (pkt->var_len >= pkt->len) ? pkt->len : pkt->var_len);
+    } else {
+      LOG_DEBUG("No Variable header.");
+    }
 
-  /* print payload with oversized packet guard */
-  if (pkt->pay_len && ((pkt->pay_len + pkt->var_len) < pkt->len)) {
-    LOG_DEBUG("Payload:");
-    LOG_DEBUG("Length: %zu", pkt->pay_len);
-    print_memory_bytes_hex((void *)&pkt->payload->data, pkt->pay_len);
-  } else {
-    LOG_DEBUG("No Payload.");
+    /* print payload with oversized packet guard */
+    if (pkt->pay_len && ((pkt->pay_len + pkt->var_len) < pkt->len)) {
+      LOG_DEBUG("Payload:");
+      LOG_DEBUG("Length: %zu", pkt->pay_len);
+      print_memory_bytes_hex_debug((void *)&pkt->payload->data, pkt->pay_len);
+    } else {
+      LOG_DEBUG("No Payload.");
+    }
   }
   return;
 }
 
 /**
- * \brief Function to print a raw packet based on the pkt->len size.
+ * \brief Function to print a raw packet based on the pkt->len
+ *          size on LOG_DEBUG.
  * \param pkt Pointer to the packet to be printed
  */
-void print_packet_raw(struct mqtt_packet *pkt) {
+void print_packet_raw_debug(struct mqtt_packet *pkt) {
 
-  LOG_DEBUG("Raw packet:");
-  print_memory_bytes_hex((void *)pkt->raw.buf, pkt->len);
+  if (DEBUG) {
+    LOG_DEBUG("Raw packet:");
+    print_memory_bytes_hex_debug((void *)pkt->raw.buf, pkt->len);
+  }
   return;
 }
 
 /**
- * \brief Function to print a summary of a packet.
+ * \brief Function to print a summary of a packet on lOG_INFO.
  * \param pkt Pointer to the packet to be printed
  */
-void print_packet_detailed(struct mqtt_packet *pkt) {
+void print_packet_detailed_info(struct mqtt_packet *pkt) {
   uint16_t len = 0;
   char buf[UTF8_ENC_STR_MAX_LEN];
 
@@ -534,10 +541,10 @@ void print_packet_detailed(struct mqtt_packet *pkt) {
 }
 
 /**
- * \brief Function to print a PUBLISH packet.
+ * \brief Function to print a PUBLISH packet on LOG_INFO.
  * \param pkt Pointer to the publish packet to be printed
  */
-void print_publish_packet(struct mqtt_packet *pkt) {
+void print_publish_packet_info(struct mqtt_packet *pkt) {
 
   if (pkt->fixed->generic.type == PUBLISH) {
     /* Print topic */

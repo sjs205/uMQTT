@@ -475,7 +475,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  print_packet_detailed(pkt);
+  print_packet_detailed_info(pkt);
   print_packet_hex_debug(pkt);
 
 cleanup:
