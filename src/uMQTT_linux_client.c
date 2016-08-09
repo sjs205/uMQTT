@@ -43,9 +43,9 @@
  * \param ip_len The length of the IP address string.
  * \param port The port to connect to.
  */
-void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,
-    unsigned int port) {
-  log_stderr(LOG_DEBUG_FN, "fn: init_linux_socket_connection");
+void init_linux_socket_connection(struct broker_conn **conn_p, char *ip,
+    unsigned int ip_len, unsigned int port) {
+  LOG_DEBUG_FN("fn: init_linux_socket_connection");
 
   struct broker_conn *conn;
 
@@ -53,7 +53,7 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
   struct linux_broker_socket *skt = '\0';
 
   if (conn && (!(skt = calloc(1, sizeof(struct linux_broker_socket))))) {
-      log_stderr(LOG_ERROR, "Allocating space for the broker connection failed");
+      LOG_ERROR("Allocating space for the broker connection failed");
       free_linux_socket(conn);
       return;
   }
@@ -79,13 +79,13 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigne
  * \return mqtt_ret
  */
 umqtt_ret linux_socket_connect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG_FN, "fn: linux_socket_connect");
+  LOG_DEBUG_FN("fn: linux_socket_connect");
 
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   if ((skt->sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
-    log_stderr(LOG_ERROR, "Could not create socket");
+    LOG_ERROR("Could not create socket");
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -93,14 +93,14 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
   if (inet_pton(skt->serv_addr.sin_family, skt->ip,
         &skt->serv_addr.sin_addr) <= 0)
   {
-    log_stderr(LOG_ERROR, "inet_pton error occured");
+    LOG_ERROR("inet_pton error occured");
     return UMQTT_CONNECT_ERROR;
   }
 
   if (connect(skt->sockfd, (struct sockaddr *)&skt->serv_addr,
         sizeof(skt->serv_addr)) == -1)
   {
-    log_stderr(LOG_ERROR, "Connect Failed: %s", strerror(errno));
+    LOG_ERROR("Connect Failed: %s", strerror(errno));
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -113,7 +113,7 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
  * \return mqtt_ret
  */
 umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG_FN, "fn: linux_socket_disconnect");
+  LOG_DEBUG_FN("fn: linux_socket_disconnect");
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
   if (skt->sockfd) {
@@ -131,16 +131,16 @@ umqtt_ret linux_socket_disconnect(struct broker_conn *conn) {
  * \param pkt Pointer to the packet to be sent.
  */
 umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: send_socket_packet");
+  LOG_DEBUG_FN("fn: send_socket_packet");
 
-  log_stderr(LOG_DEBUG, "TX: %s", get_type_string(pkt->fixed->generic.type));
+  LOG_DEBUG("TX: %s", get_type_string(pkt->fixed->generic.type));
 
   umqtt_ret ret = UMQTT_SUCCESS;
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
-  print_packet(pkt);
+  print_packet_raw_debug(pkt);
   int n = write(skt->sockfd, pkt->raw.buf, pkt->len);
   if (n < 0) {
-    log_stderr(LOG_ERROR, "writing to socket");
+    LOG_ERROR("writing to socket");
     ret = UMQTT_SEND_ERROR;
   }
 
@@ -154,25 +154,96 @@ umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \return Number of bytes read.
  */
 umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: read_socket_packet");
+  LOG_DEBUG_FN("fn: read_socket_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
+  ssize_t len = 0;
+  size_t read_len = 0;
+#if DEBUG
+  static ssize_t largest = 0;
+#endif
+
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
-  pkt->len = read(skt->sockfd, pkt->raw.buf, pkt->raw.len);
-  if (pkt->raw.len < 0) {
-    log_stderr(LOG_ERROR, "reading from socket");
+  /* Peek the packet fixed header to determine the packet length */
+  do {
+    len = recv(skt->sockfd, pkt->raw.buf, sizeof(struct pkt_fixed_header),
+        MSG_PEEK);
+  } while (len < MQTT_MIN_PKT_LEN && len > 0);
+
+  if (len == 0) {
+    /* Possibly disconnected from broker */
     ret = UMQTT_RECEIVE_ERROR;
-  } else {
-    disect_raw_packet(pkt);
+    goto exit;
+  }
 
-    log_stderr(LOG_DEBUG, "RX: %s", get_type_string(pkt->fixed->generic.type));
+  pkt->fixed = (struct pkt_fixed_header *)pkt->raw.buf;
 
-    /* can we process the message? */
-    if (conn->process_method) {
-      ret = conn->process_method(conn, pkt);
+  /* Get size of packet */
+  pkt->len = decode_remaining_len(pkt);
+  pkt->len += required_remaining_len_bytes(pkt->len) + 1;
+  LOG_DEBUG("Detected packet length: %zu", pkt->len);
+
+#if DEBUG
+  if (pkt->len > largest) {
+    largest = pkt->len;
+  }
+  LOG_DEBUG("Largest packet detected: %zu", largest);
+#endif
+
+  if (pkt->len > pkt->raw.len) {
+    LOG_DEBUG("Resizing packet from: %zu to: %zu bytes", pkt->raw.len, pkt->len);
+    ret = resize_packet(&pkt, pkt->len);
+    if (ret) {
+      goto exit;
     }
   }
+
+  /* Ensure we read all bytes of the packet */
+  while (read_len < pkt->len) {
+    len = 0;
+    len = recv(skt->sockfd, pkt->raw.buf + read_len, pkt->len - read_len , 0);
+    if (len < 0) {
+      LOG_ERROR("Reading from socket %s", strerror(errno));
+      ret = UMQTT_RECEIVE_ERROR;
+      break;
+    }
+
+    read_len += len;
+    LOG_DEBUG("Bytes expected: %zu, received: %zu, total: %zu", pkt->len,
+        len, read_len);
+  }
+
+  /* Ensure read was sucessful */
+  if (!ret && read_len >= MQTT_MIN_PKT_LEN) {
+
+    pkt->len = read_len;
+    print_packet_raw_debug(pkt);
+
+    ret = disect_raw_packet(pkt);
+    if (ret) {
+      LOG_ERROR("Failed to decode %s packet.",
+          get_type_string(pkt->fixed->generic.type));
+      conn->fail_count++;
+
+    } else {
+      LOG_DEBUG("RX: %s - %zu bytes",
+          get_type_string(pkt->fixed->generic.type), pkt->len);
+
+      /* Update packet counts */
+      conn->success_count++;
+      if (pkt->fixed->generic.type == PUBLISH) {
+        conn->publish_count++;
+      }
+
+      /* Can we process the message? */
+      if (conn->process_method) {
+        ret = conn->process_method(conn, pkt);
+      }
+    }
+  }
+
+exit:
   return ret;
 }
 
@@ -181,7 +252,7 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \param conn The connection to free.
  */
 void free_linux_socket(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG_FN, "fn: free_linux_socket");
+  LOG_DEBUG_FN("fn: free_linux_socket");
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
   if (skt) {
     free(skt);

@@ -29,10 +29,14 @@
 /* default defines - some can be overridden */
 #define MQTT_PROTO_NAME           "MQTT"
 #define MQTT_PROTO_LEVEL          0x04
-#define UMQTT_DEFAULT_CLIENTID    "uMQTT"
+#define UMQTT_DEFAULT_CLIENTID    "uMQTT-cli"
 #define UMQTT_DEFAULT_TOPIC       "uMQTT_PUB"
 #define UMQTT_DEFAULT_QOS         0
 
+#define MQTT_MIN_PKT_LEN          2
+#define MQTT_MAX_FIXED_HDR_LENGTH 5
+#define MQTT_CLIENTID_MAX_LEN     23
+#define UTF8_ENC_STR_MAX_LEN      65535
 /* Remaining length max bytes */
 #ifdef MICRO_CLIENT
   /* 128 * 128 = 16384 */
@@ -67,6 +71,7 @@ typedef enum {
   UMQTT_PACKET_ERROR,
   UMQTT_PAYLOAD_ERROR,
   UMQTT_PKT_NOT_SUPPORTED,
+  UMQTT_FILE_ERROR,
 } umqtt_ret;
 
 /**
@@ -95,22 +100,44 @@ typedef enum {
  * \brief Connect return codes.
  */
 typedef enum {
-  QOS_AT_MOST_ONCE,
-  QOS_AT_LEAST_ONCE,
-  QOS_EXACTLY_ONCE,
+  QOS_AT_MOST_ONCE    = 0x00,
+  QOS_AT_LEAST_ONCE   = 0x01,
+  QOS_EXACTLY_ONCE    = 0x02,
   QOS_RESERVED,
 } __attribute__((__packed__)) qos_t;
+
 /**
- * \brief Connect return codes.
+ * \brief MQTT protocol level versions.
+ */
+typedef enum {
+  V1         = 0x01,
+  V2         = 0x02,
+  V3_V3_1    = 0x03,
+  V3_1_1     = 0x04,
+} proto_version;
+
+/**
+ * \brief CONNECT return codes.
  */
 typedef enum {
   CONN_ACCEPTED,
+  CONN_UNACCEPT_PROTO_VER,
   CONN_REF_IDENTIFIER_REJ,
   CONN_REF_SERVER_UNAVAIL,
   CONN_REF_BAD_USER_PASS,
   CONN_REF_NOT_AUTH,
   RESERVED
-} connect_state;
+} connect_return;
+
+/**
+ * \brief SUBACK return codes.
+ */
+typedef enum {
+    SUB_SUCCESS_MAX_QOS_0 = 0x00,
+    SUB_SUCCESS_MAX_QOS_1 = 0x01,
+    SUB_SUCCESS_MAX_QOS_2 = 0x02,
+    SUB_FAILURE           = 0x80,
+} suback_return;
 
 /**
  * \brief Struct to store utf-8 encoded strings, as required for text fields.
@@ -153,7 +180,7 @@ struct __attribute__((__packed__)) pkt_publish_fixed_header {
 
 /**
  * \brief Struct to store the fixed header of a control packet.
- * \param generic igeneric fixed header
+ * \param generic generic fixed header
  * \param publish PUBLISH fixed header
  * \param remain_length The remaining length of the packet not including
  *                   the fixed header - note, currently, only 127 bytes
@@ -170,29 +197,37 @@ struct __attribute__((__packed__)) pkt_fixed_header {
 };
 
 /**
- * \brief Struct to store the variable header of a CONNECT control packet.
- * \param name_len The length of the name field.
- * \param proto_name The name of the protocol, "MQTT".
- * \param proto_level The version of the protocol.
+ * \brief Struct to store the CONNECT control packet flags.
  * \param user_flag Flag indicating whether username is present.
  * \param pass_flag Flag indicating whether password is present.
  * \param vill_retain_flag Flag indicating will retian.
  * \param vill_qos_flag Flag indicating will quality of service.
  * \param vill_flag Flag indicating will.
  * \param clean_session_flag Flag indicating whether clean session is active.
+ */
+struct __attribute__((__packed__)) connect_flags {
+  uint8_t reserved                : 1;
+  uint8_t clean_session_flag      : 1;
+  uint8_t will_flag               : 1;
+  uint8_t will_qos                : 2;
+  uint8_t will_retain_flag        : 1;
+  uint8_t pass_flag               : 1;
+  uint8_t user_flag               : 1;
+};
+
+/**
+ * \brief Struct to store the variable header of a CONNECT control packet.
+ * \param name_len The length of the name field.
+ * \param proto_name The name of the protocol, "MQTT".
+ * \param proto_level The version of the protocol.
+ * \param flags The CONNECT packet flags.
  * \param keep_alive Number of seconds a session should be kept alive.
  */
 struct __attribute__((__packed__)) connect_variable_header {
   uint16_t name_len               : 16;
   uint8_t proto_name[4];
   uint8_t proto_level;
-  uint8_t reserved                : 1;
-  uint8_t clean_session_flag      : 1;
-  uint8_t will_flag               : 1;
-  uint8_t will_qos_flag           : 1;
-  uint8_t will_retain_flag        : 1;
-  uint8_t pass_flag               : 1;
-  uint8_t user_flag               : 1;
+  struct connect_flags flags;
   uint16_t keep_alive             :16;
 };
 
@@ -225,6 +260,13 @@ struct generic_variable_header {
   uint16_t pkt_id                 : 16;
 };
 
+/**
+ * \brief Struct to store the variable header of a control packet.
+ * \param generic generic variable header
+ * \param connect CONNECT variable header
+ * \param connack CONNACK variable header
+ * \param publish PUBLISH variable header
+ */
 struct pkt_variable_header {
   union {
     struct generic_variable_header generic;
@@ -287,25 +329,33 @@ umqtt_ret set_publish_variable_header(struct mqtt_packet *pkt, const char *topic
     size_t topic_len);
 umqtt_ret set_publish_fixed_flags(struct mqtt_packet *pkt, uint8_t retain,
     uint8_t qos, uint8_t dup);
-umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
 umqtt_ret init_packet_payload(struct mqtt_packet *pkt, ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
-umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *cID,
-    size_t cID_len);
-umqtt_ret set_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
+umqtt_ret set_connect_payload(struct mqtt_packet *pkt, const char *clientid,
+    const char *username, const char *password, const char *topic,
+    const char *message);
+umqtt_ret set_subscribe_variable_header(struct mqtt_packet *pkt);
+umqtt_ret set_un_subscribe_payload(struct mqtt_packet *pkt, const char *topic,
     size_t topic_len, uint8_t qos);
+void set_subscribe_topic_qos(struct mqtt_packet *pkt, uint8_t qos);
 struct mqtt_packet *construct_packet_headers(ctrl_pkt_type type);
 struct mqtt_packet *construct_default_packet(ctrl_pkt_type type,
     uint8_t *payload, size_t pay_len);
 umqtt_ret resize_packet(struct mqtt_packet **pkt_p, size_t len);
 size_t finalise_packet(struct mqtt_packet *pkt);
 void realign_packet(struct mqtt_packet *pkt);
-void disect_raw_packet(struct mqtt_packet *pkt);
+umqtt_ret disect_raw_packet(struct mqtt_packet *pkt);
+
+uint16_t generate_packet_id(uint16_t pkt_id);
+uint16_t set_packet_pkt_id(struct mqtt_packet *pkt, uint16_t pkt_id);
+uint16_t get_packet_pkt_id(struct mqtt_packet *pkt);
 
 void encode_remaining_len(struct mqtt_packet *pkt, unsigned int len);
 unsigned int decode_remaining_len(struct mqtt_packet *pkt);
+uint16_t utf8_enc_str_size(struct utf8_enc_str *utf8);
 uint16_t encode_utf8_string(struct utf8_enc_str *utf8_str, const char *buf,
     uint16_t len);
+uint16_t decode_utf8_string(char *buf, struct utf8_enc_str *utf8_str);
 uint8_t required_remaining_len_bytes(unsigned int len);
 
 void memmove_back(uint8_t *mem, size_t delta, size_t n);

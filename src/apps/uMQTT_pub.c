@@ -33,10 +33,6 @@
 #include "uMQTT_linux_client.h"
 #include "../inc/log.h"
 
-/* ip of test.mosquitto.org */
-#define MQTT_BROKER_IP        "85.119.83.194\0"
-#define MQTT_BROKER_PORT      1883
-
 #define MAX_TOPIC_LEN         1024
 #define MAX_MSG_LEN           1024
 
@@ -46,7 +42,8 @@
 static int print_usage() {
 
   fprintf(stderr,
-      "uMQTT_pub is an application that connects to an MQTT broker and sends a user defined\n"
+      "uMQTT_pub is an application that connects to an MQTT broker and sends "
+      "a user defined\n"
       "publish pocket before disconnecting\n"
       ""
       "Usage: uMQTT_pub [options] -m <PUBLISH message>\n"
@@ -60,8 +57,9 @@ static int print_usage() {
       " -r [--retain]            : Set the retain flag\n"
       "\n"
       "Broker options:\n"
-      " -b [--broker] <broker-IP>: Change the default broker IP - only IP addresses are\n"
-      "                            currently supported. Default: test.mosquitto.org\n"
+      " -b [--broker] <broker-IP>: Change the default broker IP\n"
+      "                             - only IP addresses are\n"
+      "                            currently supported. Default: localhost\n"
       " -p [--port] <port>       : Change the default port. Default: 1883\n"
       " -c [--clientid] <id>     : Change the default clientid\n"
       "\n"
@@ -95,7 +93,7 @@ umqtt_ret file_read_contents(const char *filename, uint8_t *buf, size_t *len) {
   fseek(f, 0, SEEK_SET);
 
   if (fsize > *len) {
-    log_stderr(LOG_ERROR, "The file (%zu bytes) is larger than buffer (%zu bytes)",
+    LOG_ERROR("The file (%zu bytes) is larger than buffer (%zu bytes)",
       fsize, *len);
     fclose(f);
     ret = UMQTT_PAYLOAD_ERROR;
@@ -137,7 +135,8 @@ int main(int argc, char **argv) {
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:f:", long_options, &option_index)) != -1) {
+    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:f:", long_options,
+            &option_index)) != -1) {
 
       switch (c) {
         case 'h':
@@ -160,7 +159,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(topic, optarg);
           } else {
-            log_stderr(LOG_ERROR, "The topic flag should be followed by a topic");
+            LOG_ERROR("The topic flag should be followed by a topic");
             return print_usage();
           }
           break;
@@ -170,7 +169,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(msg, optarg);
           } else {
-            log_stderr(LOG_ERROR, "The message flag should be followed by a message");
+            LOG_ERROR("The message flag should be followed by a message");
             return print_usage();
           }
           break;
@@ -180,7 +179,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(filename, optarg);
           } else {
-            log_stderr(LOG_ERROR, "The file flag should be followed by a file");
+            LOG_ERROR("The file flag should be followed by a file");
             return print_usage();
           }
           break;
@@ -190,7 +189,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(broker_ip, optarg);
           } else {
-            log_stderr(LOG_ERROR, "The broker flag should be followed by an IP address");
+            LOG_ERROR("The broker flag should be followed by an IP address");
             return print_usage();
           }
           break;
@@ -200,7 +199,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             broker_port = *optarg;
           } else {
-            log_stderr(LOG_ERROR, "The port flag should be followed by a port");
+            LOG_ERROR("The port flag should be followed by a port");
             return print_usage();
           }
           break;
@@ -210,8 +209,7 @@ int main(int argc, char **argv) {
           if (optarg) {
             strcpy(clientid, optarg);
           } else {
-            log_stderr(LOG_ERROR,
-                "The clientid flag should be followed by a clientid");
+            LOG_ERROR("The clientid flag should be followed by a clientid");
             return print_usage();
           }
           break;
@@ -224,17 +222,17 @@ int main(int argc, char **argv) {
   }
 
   if (msg[0] && filename[0]) {
-      log_stderr(LOG_ERROR, "The PUBLISH message is missing");
+      LOG_ERROR("The PUBLISH message is missing");
       return -1;
   }
 
   struct broker_conn *conn;
 
-  log_stdout(LOG_INFO, "Initialisig socket connection");
+  LOG_INFO("Initialisig socket connection");
 
   init_linux_socket_connection(&conn, broker_ip, sizeof(broker_ip), broker_port);
   if (!conn) {
-    log_stdout(LOG_INFO, "XError: Initialising socket connection");
+    LOG_INFO("XError: Initialising socket connection");
     return -1;
   }
 
@@ -242,32 +240,32 @@ int main(int argc, char **argv) {
     broker_set_clientid(conn, clientid, sizeof(clientid));
   }
 
-  log_stdout(LOG_INFO, "Connecting to broker");
+  LOG_INFO("Connecting to broker");
 
   struct linux_broker_socket *skt = '\0';
   if ((ret = broker_connect(conn))) {
-    log_stderr(LOG_ERROR, "Initialising socket connection");
+    LOG_ERROR("Initialising socket connection");
     free_connection(conn);
     return ret;
   } else {
     skt = (struct linux_broker_socket *)conn->context;
-    log_stdout(LOG_INFO, "Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
+    LOG_INFO("Connected to broker:\nip: %s port: %d", skt->ip, skt->port);
   }
 
-  log_stdout(LOG_INFO, "Constructiing MQTT PUBLISH packet with:");
-  log_stdout(LOG_INFO, "Topic; %s", topic);
-  log_stdout(LOG_INFO, "Message: %s", msg);
+  LOG_INFO("Constructing MQTT PUBLISH packet with:");
+  LOG_INFO("Topic: %s", topic);
+  LOG_INFO("Message: %s", msg);
 
   struct mqtt_packet *pkt = construct_packet_headers(PUBLISH);
 
   if (!pkt || (ret = set_publish_variable_header(pkt, topic, strlen(topic)))) {
-    log_stderr(LOG_ERROR, "Setting up packet");
+    LOG_ERROR("Setting up packet");
     ret = UMQTT_ERROR;
     goto free;
   }
 
   if ((ret = set_publish_fixed_flags(pkt, retain, 0, 0))) {
-    log_stderr(LOG_ERROR, "Setting publish flags");
+    LOG_ERROR("Setting publish flags");
     ret = UMQTT_ERROR;
     goto free;
   }
@@ -278,20 +276,20 @@ int main(int argc, char **argv) {
     size_t len = MAX_REMAIN_LEN_PRODUCT;
     uint8_t *buf = calloc(sizeof(uint8_t), len);
     if (!buf) {
-      log_stderr(LOG_ERROR, "File buffer allocation failed");
+      LOG_ERROR("File buffer allocation failed");
       ret = UMQTT_ERROR;
       goto free;
     }
 
     if ((ret = file_read_contents(filename, buf, &len))) {
-      log_stderr(LOG_ERROR, "Reading file failed");
+      LOG_ERROR("Reading file failed");
       ret = UMQTT_ERROR;
       free (buf);
       goto free;
     }
 
     if ((ret = init_packet_payload(pkt, PUBLISH, buf, len))) {
-      log_stderr(LOG_ERROR, "Attaching payload");
+      LOG_ERROR("Attaching payload");
       ret = UMQTT_ERROR;
       free (buf);
       goto free;
@@ -302,7 +300,7 @@ int main(int argc, char **argv) {
   } else {
 
     if ((ret = init_packet_payload(pkt, PUBLISH, (uint8_t *)msg, strlen(msg)))) {
-      log_stderr(LOG_ERROR, "Attaching payload");
+      LOG_ERROR("Attaching payload");
       ret = UMQTT_ERROR;
       goto free;
     }
@@ -310,17 +308,20 @@ int main(int argc, char **argv) {
 
   finalise_packet(pkt);
 
-  log_stdout(LOG_INFO, "Sending packet to broker");
+  LOG_INFO("Sending packet to broker");
 
+  int i =0;
+  while (i++ < 0xff) {
   if ((ret = broker_send_packet(conn, pkt))) {
-    log_stderr(LOG_ERROR, "Sending packet failed");
+    LOG_ERROR("Sending packet failed");
 
   } else {
-    log_stdout(LOG_INFO, "Successfully sent packet");
+    LOG_INFO("Successfully sent packet");
+  }
   }
 
 free:
-  log_stdout(LOG_INFO, "Disconnecting from broker");
+  LOG_INFO("Disconnecting from broker");
   broker_disconnect(conn);
   free_connection(conn);
   free_packet(pkt);

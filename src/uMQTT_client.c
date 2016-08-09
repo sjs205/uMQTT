@@ -35,27 +35,27 @@
  * \param conn_p Pointer to the address of the new connection struct.
  */
 void init_connection(struct broker_conn **conn_p) {
-  log_stderr(LOG_DEBUG_FN, "fn: init_connection");
+  LOG_DEBUG_FN("fn: init_connection");
 
   struct broker_conn *conn;
 
   if (!(conn = calloc(1, sizeof(struct broker_conn)))) {
-    log_stderr(LOG_ERROR, "Allocating space for the broker connection failed");
+    LOG_ERROR("Allocating space for the broker connection failed");
     free_connection(conn);
   }
 
   if (!(conn->client.clientid = calloc(UMQTT_CLIENTID_MAX_LEN, sizeof(char)))) {
-    log_stderr(LOG_ERROR, "Allocating space for the clientid failed");
+    LOG_ERROR("Allocating space for the clientid failed");
     free_connection(conn);
   }
 
   if (!(conn->client.username = calloc(UMQTT_USERNAME_MAX_LEN, sizeof(char)))) {
-    log_stderr(LOG_ERROR, "Allocating space for the username failed");
+    LOG_ERROR("Allocating space for the username failed");
     free_connection(conn);
   }
 
   if (!(conn->client.password = calloc(UMQTT_PASSWORD_MAX_LEN, sizeof(char)))) {
-    log_stderr(LOG_ERROR, "Allocating space for the password failed");
+    LOG_ERROR("Allocating space for the password failed");
     free_connection(conn);
   }
 
@@ -78,7 +78,7 @@ void register_connection_methods(struct broker_conn *conn,
     umqtt_ret (*receive_method)(struct broker_conn *, struct mqtt_packet *),
     umqtt_ret (*process_method)(struct broker_conn *, struct mqtt_packet *),
     void (*free_method)(struct broker_conn *)) {
-  log_stderr(LOG_DEBUG_FN, "fn: register_connection_methods");
+  LOG_DEBUG_FN("fn: register_connection_methods");
 
   if (connect_method) {
     conn->connect_method = connect_method;
@@ -113,11 +113,11 @@ void register_connection_methods(struct broker_conn *conn,
  * \return umqtt_ret return code.
  */
 umqtt_ret init_process_methods(struct mqtt_process_methods **proc_p) {
-  log_stderr(LOG_DEBUG_FN, "fn: init_process_methods");
+  LOG_DEBUG_FN("fn: init_process_methods");
   struct mqtt_process_methods *proc;
 
   if (!(proc = calloc(1, sizeof(struct mqtt_process_methods)))) {
-    log_stderr(LOG_ERROR, "Allocating space for MQTT process methods failed");
+    LOG_ERROR("Allocating space for MQTT process methods failed");
     free_process_methods(proc);
     return UMQTT_MEM_ERROR;
   }
@@ -159,11 +159,11 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
   umqtt_ret (*pingreq_method)(struct broker_conn *, struct mqtt_packet *),
   umqtt_ret (*pingresp_method)(struct broker_conn *, struct mqtt_packet *),
   umqtt_ret (*disconnect_method)(struct broker_conn *, struct mqtt_packet *)) {
-  log_stderr(LOG_DEBUG_FN, "fn: register_process_methods");
+  LOG_DEBUG_FN("fn: register_process_methods");
 
   struct mqtt_process_methods *proc;
   if (init_process_methods(&proc)) {
-    log_stderr(LOG_ERROR, "Allocating memory");
+    LOG_ERROR("Allocating memory");
     return UMQTT_MEM_ERROR;
   }
 
@@ -236,10 +236,10 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
  */
 umqtt_ret broker_set_clientid(struct broker_conn *conn, const char *clientid,
     size_t len) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_set_clientid");
+  LOG_DEBUG_FN("fn: broker_set_clientid");
 
   if (!strncpy(conn->client.clientid, clientid, len)) {
-    log_stderr(LOG_ERROR, "Failed to copy clientid");
+    LOG_ERROR("Failed to copy clientid");
     return UMQTT_MEM_ERROR;
   }
 
@@ -253,12 +253,12 @@ umqtt_ret broker_set_clientid(struct broker_conn *conn, const char *clientid,
  * \return umqtt_ret
  */
 umqtt_ret broker_connect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_connect");
+  LOG_DEBUG_FN("fn: broker_connect");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
   if (conn->connect_method && conn->connect_method(conn)) {
-    log_stderr(LOG_ERROR, "Broker connection failed");
+    LOG_ERROR("Broker connection failed");
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -272,33 +272,30 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   }
 
   if (conn->client.clientid[0]) {
-    set_connect_payload(pkt, conn->client.clientid,
-        strlen(conn->client.clientid));
+    set_connect_payload(pkt, conn->client.clientid, NULL, NULL, NULL, NULL);
   } else {
     /* set unique clientid */
-    char buf[UMQTT_DEFAULT_PKT_LEN] = UMQTT_DEFAULT_TOPIC;
+    char buf[UMQTT_DEFAULT_PKT_LEN] = UMQTT_DEFAULT_CLIENTID;
     int len = strlen(buf);
     buf[len++] = '-';
     gen_unique_string(&buf[len], 8);
 
-    set_connect_payload(pkt, buf, strlen(buf));
+    set_connect_payload(pkt, buf, NULL, NULL, NULL, NULL);
   }
 
   finalise_packet(pkt);
 
-  print_packet(pkt);
-
   ret = conn->send_method(conn, pkt);
   free_packet(pkt);
   if (ret) {
-    log_stderr(LOG_ERROR, "Connect Packet Failed");
+    LOG_ERROR("Connect Packet Failed");
     return ret;
   }
 
   /* get response */
   struct mqtt_packet *pkt_resp;
   if (init_packet(&pkt_resp)) {
-    log_stderr(LOG_ERROR, "Allocating memory");
+    LOG_ERROR("Allocating memory");
     free_packet(pkt);
     return UMQTT_MEM_ERROR;
   }
@@ -308,7 +305,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   do {
     ret = conn->receive_method(conn, pkt_resp);
     if (ret) {
-      log_stderr(LOG_ERROR, "Connect Response Packet Failed");
+      LOG_ERROR("Connect Response Packet Failed");
       break;
     }
   } while (conn->state != UMQTT_CONNECTED && count++ < MAX_RESP_PKT_RETRIES);
@@ -319,7 +316,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
     ret = UMQTT_CONNECT_ERROR;
   }
 
-  return UMQTT_SUCCESS;
+  return ret;
 }
 
 /**
@@ -328,7 +325,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
  * \param pkt The Packet to send to the broker
  */
 umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_send_packet");
+  LOG_DEBUG_FN("fn: broker_send_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
   if (conn->send_method) {
@@ -345,7 +342,7 @@ umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
  * \param pkt Pointer to the incoming packet.
  */
 umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_receive_packet");
+  LOG_DEBUG_FN("fn: broker_receive_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -364,7 +361,7 @@ umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pk
  * \param pkt The packet to be processed.
  */
 umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_process_packet");
+  LOG_DEBUG_FN("fn: broker_process_packet");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -389,7 +386,7 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
           conn->state = UMQTT_CONNECTED;
         } else {
           conn->state = UMQTT_DISCONNECTED;
-          log_stderr(LOG_ERROR, "MQTT connect failed");
+          LOG_ERROR("MQTT connect failed");
           ret = UMQTT_CONNECT_ERROR;
         }
       }
@@ -399,8 +396,6 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
       if (conn->proc && conn->proc->publish_method) {
         ret = conn->proc->publish_method(conn, pkt);
 
-      } else {
-        print_publish_packet(pkt);
       }
       break;
 
@@ -469,7 +464,7 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
             if (pkt->payload->data == 0x00) {
               pkt->fixed->generic.type = SUBACK;
             } else {
-              log_stderr(LOG_ERROR, "bad SUBACK return: 0x%X", pkt->payload->data);
+              LOG_ERROR("bad SUBACK return: 0x%X", pkt->payload->data);
               ret = UMQTT_CONNECT_ERROR;
             }
             break;
@@ -495,10 +490,7 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
         /* send PINGRESP */
         struct mqtt_packet *pkt_resp = construct_default_packet(PINGRESP, 0, 0);
         if (conn->send_method(conn, pkt)) {
-          log_stderr(LOG_ERROR, "Failed to send PINGRESP packet");
-          if (log_level(LOG_NONE) == LOG_DEBUG) {
-            print_packet(pkt);
-          }
+          LOG_ERROR("Failed to send PINGRESP packet");
           ret = UMQTT_PACKET_ERROR;
         }
         free_packet(pkt_resp);
@@ -528,11 +520,8 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
   }
 
   if (ret == UMQTT_PKT_NOT_SUPPORTED) {
-    log_stderr(LOG_ERROR, "MQTT packet not currently supported: %s",
+    LOG_ERROR("MQTT packet not currently supported: %s",
         get_type_string(pkt->fixed->generic.type));
-    if (log_level(LOG_NONE) == LOG_DEBUG) {
-      print_packet(pkt);
-    }
   }
 
   return ret;
@@ -550,22 +539,22 @@ umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pk
 umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
     uint8_t retain, uint8_t qos, uint8_t dup, size_t topic_len, uint8_t
     *payload, size_t pay_len, uint8_t flags) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_publish");
+  LOG_DEBUG_FN("fn: broker_publish");
 
   struct mqtt_packet *pkt = construct_default_packet(PUBLISH, payload,
       pay_len);
   if (!pkt) {
-    log_stderr(LOG_ERROR, "PUBLISH packet failed");
+    LOG_ERROR("PUBLISH packet failed");
     return UMQTT_ERROR;
   }
 
   if (set_publish_fixed_flags(pkt, retain, qos, dup)) {
-    log_stderr(LOG_ERROR, "Failed to set packet flags");
+    LOG_ERROR("Failed to set packet flags");
     return UMQTT_ERROR;
   }
 
   if (conn->send_method(conn, pkt)) {
-    log_stderr(LOG_ERROR, "Failed to send packet");
+    LOG_ERROR("Failed to send packet");
     return UMQTT_ERROR;
   }
 
@@ -580,17 +569,17 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
  */
 umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     size_t topic_len) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_subscribe");
+  LOG_DEBUG_FN("fn: broker_subscribe");
   umqtt_ret ret = UMQTT_SUCCESS;
 
   /* send subscribe packet */
   struct mqtt_packet *pkt = construct_default_packet(SUBSCRIBE, 0, 0);
   if (!pkt) {
-    log_stderr(LOG_ERROR, "Creating subscribe packet");
+    LOG_ERROR("Creating subscribe packet");
     return UMQTT_PACKET_ERROR;
   }
 
-  set_subscribe_payload(pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
+  set_un_subscribe_payload(pkt, topic, topic_len, UMQTT_DEFAULT_QOS);
   finalise_packet(pkt);
 
   /* register subscription */
@@ -598,7 +587,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
 
   ret = conn->send_method(conn, pkt);
   if (ret) {
-    log_stderr(LOG_ERROR, "Broker connection failed");
+    LOG_ERROR("Broker connection failed");
     free_packet(pkt);
     return ret;
   }
@@ -606,7 +595,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
   /* get response */
   struct mqtt_packet *pkt_resp;
   if (init_packet(&pkt_resp)) {
-    log_stderr(LOG_ERROR, "Allocating memory");
+    LOG_ERROR("Allocating memory");
     return UMQTT_MEM_ERROR;
   }
 
@@ -615,7 +604,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
   do {
     ret = conn->receive_method(conn, pkt_resp);
     if (ret) {
-      log_stderr(LOG_ERROR, "Subscribe Response Packet Failed");
+      LOG_ERROR("Subscribe Response Packet Failed");
       free_packet(pkt_resp);
       return ret;
     }
@@ -635,7 +624,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
  * \param conn The connection to close.
  */
 umqtt_ret broker_disconnect(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG_FN, "fn: broker_disconnect");
+  LOG_DEBUG_FN("fn: broker_disconnect");
 
   umqtt_ret ret = UMQTT_SUCCESS;
 
@@ -669,7 +658,7 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
  * \param pkt The packet to free.
  */
 void free_process_methods(struct mqtt_process_methods *proc) {
-  log_stderr(LOG_DEBUG_FN, "fn: free_process_methods");
+  LOG_DEBUG_FN("fn: free_process_methods");
   if (proc) {
     free(proc);
   }
@@ -682,7 +671,7 @@ void free_process_methods(struct mqtt_process_methods *proc) {
  * \param conn The connection to free.
  */
 void free_connection(struct broker_conn *conn) {
-  log_stderr(LOG_DEBUG_FN, "fn: free_connection");
+  LOG_DEBUG_FN("fn: free_connection");
 
   if (conn->free_method) {
     conn->free_method(conn);
@@ -705,6 +694,6 @@ void free_connection(struct broker_conn *conn) {
   if (conn) {
     free(conn);
   }
-  
+
   return;
 }
