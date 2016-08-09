@@ -2,7 +2,7 @@
 ###############################################################################
  # File: memory_leak_tests.pl
  # Description: Perl script to detect memory leaks in the uMQTT tests.
- # 
+ #
  # Author: Steven Swann - swannonline@googlemail.com
  #
  # Copyright (c) swannonline, 2013-2014
@@ -37,6 +37,8 @@ use constant MEMORY_LEAK_ERR_RET => 255;
 my $test_dir = './results';
 
 my $valgrind_cmd = "valgrind --leak-check=full --track-origins=yes --error-exitcode=" . MEMORY_LEAK_ERR_RET . " ";
+
+my $broker_ip = $ARGV[0] if defined $ARGV[0];
 
 my $ret = 0;
 my $test_count = 0;
@@ -79,7 +81,7 @@ sub make_table {
          $table->rule(@rule);
 }
 
-# Function to return signal name from number 
+# Function to return signal name from number
 # edited from: http://perldoc.perl.org/Config.html
 sub get_signal_name
 {
@@ -94,7 +96,7 @@ sub get_signal_name
     @sig_num{@names} = split ' ', $Config{sig_num};
     foreach (@names) {
       $sig_name[$sig_num{$_}] ||= $_;
-    }   
+    }
   }
   return $sig_name[$signum];
 }
@@ -133,7 +135,7 @@ sub run_test
     }
     else
     {
-      if ($ret == MEMORY_LEAK_ERR_RET) 
+      if ($ret == MEMORY_LEAK_ERR_RET)
       {
         $status = 'MemLeak';
         print "\n\t\tERROR: Memory errors detected";
@@ -152,7 +154,7 @@ sub run_test
 }
 
 # function to print results in a table
-# \param @results = @([No, Name, Status, rc, exp_rc, memleak]) 
+# \param @results = @([No, Name, Status, rc, exp_rc, memleak])
 sub print_result_table
 {
   my ($r) = @_;
@@ -194,7 +196,7 @@ sub uMQTT_pub_test
   my $name = "uMQTT_pub_test";
   my $exp_rc = 0;
   my $ret = 0;
-  my $cmd = $valgrind_cmd . "bin/uMQTT_pub_test",
+  my $cmd = $valgrind_cmd . "bin/uMQTT_pub_test $broker_ip",
 
   print "\n**** TEST: $num - $name ****\n\n";
   print "\tExec command:\n\t$cmd\n";
@@ -214,7 +216,7 @@ sub uMQTT_sub_test
   my $name = "uMQTT_sub_test";
   my $exp_rc = 0;
   my $ret = 0;
-  my $cmd = $valgrind_cmd . "bin/uMQTT_sub_test",
+  my $cmd = $valgrind_cmd . "bin/uMQTT_sub_test $broker_ip",
 
   print "\n**** TEST: $num - $name ****\n\n";
   print "\tExec command:\n\t$cmd\n";
@@ -227,7 +229,7 @@ sub uMQTT_sub_test
 #
 # START TESTS
 #
-my $error;
+my $error = 0;
 
 if (uMQTT_tests($test_no++, \@results) != 0)
 {

@@ -32,14 +32,21 @@
 #include "uMQTT_helper.h"
 #include "../inc/log.h"
 
-int main() {
+int main(int argc, char *argv[]) {
   log_level(LOG_DEBUG);
 
   int ret;
   struct broker_conn *conn;
 
-  init_linux_socket_connection(&conn, MQTT_BROKER_IP,
-      sizeof(MQTT_BROKER_IP), 1883);
+  if (argc > 1) {
+    /* argv[1] should be the ip address of the broker */
+    log_std(LOG_INFO, "Broker IP: %s\n", argv[1]);
+    init_linux_socket_connection(&conn, argv[1], strlen(argv[1]),
+        MQTT_BROKER_PORT);
+  } else {
+    init_linux_socket_connection(&conn, MQTT_BROKER_IP,
+        sizeof(MQTT_BROKER_IP), MQTT_BROKER_PORT);
+  }
   if (!conn) {
     log_std(LOG_ERROR, "Initialising socket connection");
     free_linux_socket(conn);
@@ -59,7 +66,9 @@ int main() {
 
   /* subscribe packet */
   struct mqtt_packet *sub_pkt = construct_default_packet(SUBSCRIBE, 0, 0);
+  finalise_packet(sub_pkt);
   struct mqtt_packet *pub_pkt = construct_default_packet(PUBLISH, 0, 0);
+  finalise_packet(pub_pkt);
   struct mqtt_packet *pkt = NULL;
 
   if (init_packet(&pkt)) {
@@ -94,7 +103,7 @@ int main() {
   }
 
   /* Wait for first message - should be the PUBLISH */
-  ret = conn->receive_method(conn, pkt); 
+  ret = conn->receive_method(conn, pkt);
   if (ret) {
     log_std(LOG_ERROR, "Receiving PUBLISH failed");
     goto free;

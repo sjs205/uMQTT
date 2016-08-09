@@ -32,15 +32,22 @@
 #include "uMQTT_helper.h"
 #include "../inc/log.h"
 
-int main() {
+int main(int argc, char *argv[]) {
   log_level(LOG_DEBUG);
 
   struct broker_conn *conn;
 
   int ret = 0;
 
-  init_linux_socket_connection(&conn, MQTT_BROKER_IP,
-      sizeof(MQTT_BROKER_IP), 1883);
+  if (argc > 1) {
+    /* argv[1] should be the ip address of the broker */
+    log_std(LOG_INFO, "Broker IP: %s\n", argv[1]);
+    init_linux_socket_connection(&conn, argv[1], strlen(argv[1]),
+        MQTT_BROKER_PORT);
+  } else {
+    init_linux_socket_connection(&conn, MQTT_BROKER_IP,
+        sizeof(MQTT_BROKER_IP), MQTT_BROKER_PORT);
+  }
   if (!conn) {
     log_std(LOG_ERROR, "Initialising connection");
     return -1;
@@ -64,6 +71,8 @@ int main() {
     log_std(LOG_ERROR, "Initialising PUBLISH packet");
     goto free;
   }
+
+  finalise_packet(pub_pkt);
 
   print_packet_hex_debug(pub_pkt);
   ret = conn->send_method(conn, pub_pkt);

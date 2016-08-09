@@ -153,10 +153,10 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
   switch (type) {
     case CONNECT: ;
       /* default connect packet */
-      uint8_t connect[19] = {
-        0x10, 0x11, 0x00, 0x04, 0x4D, 0x51, 0x54, 0x54,
-        0x04, 0x02, 0x00, 0x00, 0x00, 0x05, 0x75, 0x4D,
-        0x51, 0x54, 0x54 };
+      uint8_t connect[23] = {
+        0x10, 0x15, 0x00, 0x04, 0x4D, 0x51, 0x54, 0x54,
+        0x04, 0x02, 0x00, 0x00, 0x00, 0x09, 0x75, 0x4D,
+        0x51, 0x54, 0x54, 0x2D, 0x63, 0x6C, 0x69 };
       memcpy(pkt->raw.buf, connect, sizeof(connect));
       if (disect_raw_packet(pkt)) {
         log_std(LOG_ERROR, "Packet disect error");
@@ -181,7 +181,7 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
     case SUBSCRIBE: ;
       /* default subscribe packet */
       uint8_t subscribe[16] = {
-        0x82, 0x0E, 0x00, 0x00, 0x00, 0x09, 0x75, 0x4D,
+        0x82, 0x0E, 0x00, 0x01, 0x00, 0x09, 0x75, 0x4D,
         0x51, 0x54, 0x54, 0x5F, 0x50, 0x55, 0x42, 0x00 };
       memcpy(pkt->raw.buf, subscribe, sizeof(subscribe));
       if (disect_raw_packet(pkt)) {
@@ -227,8 +227,8 @@ struct mqtt_packet *create_manual_control_pkt(ctrl_pkt_type type) {
 
 int test_utf8_encode_decode() {
   int ret = 0;
-  char buf[sizeof(TEST_STRING)];
-  char utf8_buf[UTF8_ENC_STR_MAX_LEN];
+  char buf[sizeof(TEST_STRING)] = {0};
+  char utf8_buf[UTF8_ENC_STR_MAX_LEN] = {0};
   struct utf8_enc_str *utf8 = (struct utf8_enc_str *)utf8_buf;
 
   /* subtract 2 due to utf8_str lenth bytes */
@@ -240,7 +240,7 @@ int test_utf8_encode_decode() {
       "Testing UTF8 string encode and decode functions:");
 
   /* test encoded string */
-  if (!strcmp(TEST_STRING, &utf8->utf8_str)) {
+  if (!strcmp(TEST_STRING, (char *)&utf8->utf8_str)) {
     log_std(LOG_INFO, "String encoded correctly: %s", (char *)&utf8->utf8_str);
   } else {
     log_std(LOG_ERROR, "Encoded string mismatch: %s", (char *)&utf8->utf8_str);
