@@ -49,6 +49,7 @@ static int print_usage() {
       "Usage: uMQTT_pub [options] -m <PUBLISH message>\n"
       "General options:\n"
       " -h [--help]              : Displays this help and exits\n"
+      " -R [--repeat] <count>    : Send publish packet count times\n"
       "\n"
       "Publish options:\n"
       " -t [--topic] <topic>     : Change the default topic. Default: uMQTT_PUB\n"
@@ -72,6 +73,7 @@ static int print_usage() {
       "                                 INFO (default)\n"
       "                                 DEBUG\n"
       "                                 DEBUG_FN\n"
+      " -R [--repeat] <count>    : Send publish packet count times\n"
       "\n");
 
   return 0;
@@ -116,6 +118,7 @@ int main(int argc, char **argv) {
   int broker_port = MQTT_BROKER_PORT;
   char clientid[UMQTT_CLIENTID_MAX_LEN] = "\0";
   uint8_t retain = 0;
+  uint32_t repeat = 1;
 
   static struct option long_options[] =
   {
@@ -129,13 +132,14 @@ int main(int argc, char **argv) {
     {"broker", required_argument,       0, 'b'},
     {"port", required_argument,         0, 'p'},
     {"clientid", required_argument,     0, 'c'},
+    {"repeat", required_argument,       0, 'R'},
     {0, 0, 0, 0}
   };
 
   /* get arguments */
   while (1)
   {
-    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:f:", long_options,
+    if ((c = getopt_long(argc, argv, "hv:rt:m:b:p:c:f:R:", long_options,
             &option_index)) != -1) {
 
       switch (c) {
@@ -211,6 +215,13 @@ int main(int argc, char **argv) {
           } else {
             LOG_ERROR("The clientid flag should be followed by a clientid");
             return print_usage();
+          }
+          break;
+
+        case 'R':
+          /* set repeat count */
+          if (optarg) {
+            repeat = atoi(optarg);
           }
           break;
 
@@ -310,15 +321,15 @@ int main(int argc, char **argv) {
 
   LOG_INFO("Sending packet to broker");
 
-  int i =0;
-  while (i++ < 0xff) {
-  if ((ret = broker_send_packet(conn, pkt))) {
-    LOG_ERROR("Sending packet failed");
-
-  } else {
-    LOG_INFO("Successfully sent packet");
-  }
-  }
+  /* Send packets */
+  do {
+    ret = broker_send_packet(conn, pkt);
+    if (ret) {
+      LOG_ERROR("Sending packet failed");
+    } else {
+      LOG_INFO("Successfully sent packet");
+    }
+  } while (--repeat);
 
 free:
   LOG_INFO("Disconnecting from broker");
