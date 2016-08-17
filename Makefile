@@ -15,7 +15,7 @@ PLATFORM = x86
 ifeq ($(PLATFORM),x86)
 
 CC = gcc
-CFLAGS = -c -Wall -Werror -I$(INCDIR) -O2
+CFLAGS += -c -Wall -Werror -I$(INCDIR) -O2
 LDFLAGS =
 
 else ifeq ($(PLATFORM),avr)

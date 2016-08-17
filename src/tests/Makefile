@@ -1,12 +1,17 @@
-UMQTT_PUB_TEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o \
-                      $(OBJDIR)/uMQTT_linux_client.o $(OBJDIR)/uMQTT_helper.o \
+UMQTT_PUB_TEST_OBJS = $(OBJDIR)/uMQTT_client.o \
+                      $(OBJDIR)/uMQTT.o \
+                      $(OBJDIR)/uMQTT_linux_client.o \
+                      $(OBJDIR)/uMQTT_helper.o \
                       $(OBJDIR)/log.o
 
-UMQTT_SUB_TEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o \
-                      $(OBJDIR)/uMQTT_linux_client.o $(OBJDIR)/uMQTT_helper.o \
+UMQTT_SUB_TEST_OBJS = $(OBJDIR)/uMQTT_client.o \
+                      $(OBJDIR)/uMQTT.o \
+                      $(OBJDIR)/uMQTT_linux_client.o \
+                      $(OBJDIR)/uMQTT_helper.o \
                       $(OBJDIR)/log.o
 
-UMQTT_UTEST_OBJS = $(OBJDIR)/uMQTT_client.o $(OBJDIR)/uMQTT.o \
+UMQTT_UTEST_OBJS = $(OBJDIR)/uMQTT_client.o \
+                   $(OBJDIR)/uMQTT.o \
                    $(OBJDIR)/uMQTT_helper.o \
                    $(OBJDIR)/log.o
 

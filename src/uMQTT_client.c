@@ -72,6 +72,7 @@ void init_connection(struct broker_conn **conn_p) {
   return;
 }
 
+#if !MICRO_CLIENT
 /**
  * \brief Function to register implementation specific connection methods.
  * \param connect_method Function pointer to the connect method.
@@ -240,6 +241,21 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc_p,
 }
 
 /**
+ * \brief Function to free memory allocated to struct mqtt_packet.
+ * \param pkt The packet to free.
+ */
+void free_process_methods(struct mqtt_process_methods *proc) {
+  LOG_DEBUG_FN("fn: free_process_methods");
+  if (proc) {
+    free(proc);
+  }
+
+  return;
+}
+
+#endif
+
+/**
  * \brief Function to set the clientid.
  * \param conn Pointer to the broker_conn struct.
  * \param clientid The clientid.
@@ -272,10 +288,17 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   struct mqtt_packet *pkt = NULL;
   struct mqtt_packet *pkt_resp = NULL;
 
-  if (conn->connect_method && conn->connect_method(conn)) {
-    LOG_ERROR("Broker connection failed");
-    return UMQTT_CONNECT_ERROR;
+  LOG_DEBUG_FN("fn: broker_connect");
+
+#if !MICRO_CLIENT
+  if (conn->connect_method) {
+    ret = conn->connect_method(conn);
+    if (ret) {
+      LOG_ERROR("Broker connection failed");
+      return UMQTT_CONNECT_ERROR;
+    }
   }
+#endif
 
   /* build connect packet */
   pkt = construct_packet_headers(CONNECT);
@@ -300,7 +323,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
 
   finalise_packet(pkt);
 
-  ret = conn->send_method(conn, pkt);
+  ret = broker_send_packet(conn, pkt);
   free_packet(pkt);
   if (ret) {
     LOG_ERROR("Connect Packet Failed");
@@ -317,7 +340,7 @@ umqtt_ret broker_connect(struct broker_conn *conn) {
   count = 0;
 
   do {
-    ret = conn->receive_method(conn, pkt_resp);
+    ret = broker_receive_packet(conn, pkt_resp);
     if (ret) {
       LOG_ERROR("Connect Response Packet Failed");
       break;
@@ -344,11 +367,15 @@ umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
 
   LOG_DEBUG_FN("fn: broker_send_packet");
 
+#if !MICRO_CLIENT
   if (conn->send_method) {
     ret = conn->send_method(conn, pkt);
   } else {
     ret = UMQTT_SEND_ERROR;
   }
+#else
+
+#endif
   return ret;
 }
 
@@ -363,11 +390,15 @@ umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pk
 
   LOG_DEBUG_FN("fn: broker_receive_packet");
 
+#if !MICRO_CLIENT
   if (conn->receive_method) {
     ret = conn->receive_method(conn, pkt);
   } else {
     ret = UMQTT_RECEIVE_ERROR;
   }
+#else
+
+#endif
 
   return ret;
 }
@@ -380,159 +411,64 @@ umqtt_ret broker_receive_packet(struct broker_conn *conn, struct mqtt_packet *pk
 umqtt_ret broker_process_packet(struct broker_conn *conn, struct mqtt_packet *pkt) {
 
   umqtt_ret ret = UMQTT_SUCCESS;
-  struct mqtt_packet *pkt_resp = NULL;
 
   LOG_DEBUG_FN("fn: broker_process_packet");
 
   switch (pkt->fixed->generic.type) {
-
     case CONNECT:
-      if (conn->proc && conn->proc->connect_method) {
-        ret = conn->proc->connect_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_connect_pkt(conn, pkt);
       break;
 
     case CONNACK:
-      if (conn->proc && conn->proc->connack_method) {
-        ret = conn->proc->connack_method(conn, pkt);
-
-      } else {
-        /* Processing response */
-        if (pkt->variable->connack.connect_ret == CONN_ACCEPTED) {
-          conn->state = UMQTT_CONNECTED;
-        } else {
-          conn->state = UMQTT_DISCONNECTED;
-          LOG_ERROR("MQTT connect failed");
-          ret = UMQTT_CONNECT_ERROR;
-        }
-      }
+      ret = client_process_connack_pkt(conn, pkt);
       break;
 
     case PUBLISH:
-      if (conn->proc && conn->proc->publish_method) {
-        ret = conn->proc->publish_method(conn, pkt);
-
-      }
+      ret = client_process_publish_pkt(conn, pkt);
       break;
 
     case PUBACK:
-      if (conn->proc && conn->proc->puback_method) {
-        ret = conn->proc->puback_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_puback_pkt(conn, pkt);
       break;
 
     case PUBCOMP:
-      if (conn->proc && conn->proc->pubcomp_method) {
-        ret = conn->proc->pubcomp_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_pubcomp_pkt(conn, pkt);
       break;
 
     case PUBREL:
-      if (conn->proc && conn->proc->pubrel_method) {
-        ret = conn->proc->pubrel_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_pubrel_pkt(conn, pkt);
       break;
 
     case PUBREC:
-      if (conn->proc && conn->proc->pubrec_method) {
-        ret = conn->proc->pubrec_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_pubrec_pkt(conn, pkt);
       break;
 
     case SUBSCRIBE:
-      if (conn->proc && conn->proc->subscribe_method) {
-        ret = conn->proc->subscribe_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_subscribe_pkt(conn, pkt);
       break;
 
     case UNSUBSCRIBE:
-      if (conn->proc && conn->proc->unsubscribe_method) {
-        ret = conn->proc->unsubscribe_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_unsubscribe_pkt(conn, pkt);
       break;
 
     case SUBACK:
-      if (conn->proc && conn->proc->suback_method) {
-        ret = conn->proc->suback_method(conn, pkt);
-
-      } else {
-        int i = 0;
-        for (i = 0; i < conn->sub_count; i++) {
-          if (pkt->variable->generic.pkt_id ==
-              conn->subs[i]->variable->generic.pkt_id) {
-            if (pkt->payload->data == 0x00) {
-              pkt->fixed->generic.type = SUBACK;
-            } else {
-              LOG_ERROR("bad SUBACK return: 0x%X", pkt->payload->data);
-              ret = UMQTT_CONNECT_ERROR;
-            }
-            break;
-          }
-        }
-      }
+      ret = client_process_suback_pkt(conn, pkt);
       break;
 
     case UNSUBACK:
-      if (conn->proc && conn->proc->unsuback_method) {
-        ret = conn->proc->unsuback_method(conn, pkt);
-
-      } else {
-        ret = UMQTT_PKT_NOT_SUPPORTED;
-      }
+      ret = client_process_unsuback_pkt(conn, pkt);
       break;
 
     case PINGREQ:
-      if (conn->proc && conn->proc->pingreq_method) {
-        ret = conn->proc->pingreq_method(conn, pkt);
-
-      } else {
-        /* send PINGRESP */
-        pkt_resp = construct_default_packet(PINGRESP, 0, 0);
-        if (conn->send_method(conn, pkt)) {
-          LOG_ERROR("Failed to send PINGRESP packet");
-          ret = UMQTT_PACKET_ERROR;
-        }
-        free_packet(pkt_resp);
-      }
+      ret = client_process_pingreq_pkt(conn, pkt);
       break;
 
     case PINGRESP:
-      if (conn->proc && conn->proc->pingresp_method) {
-        ret = conn->proc->pingresp_method(conn, pkt);
-
-      } else {
-        conn->state = UMQTT_CONNECTED;
-      }
+      ret = client_process_pingresp_pkt(conn, pkt);
       break;
 
     case DISCONNECT:
-      if (conn->proc && conn->proc->disconnect_method) {
-        ret = conn->proc->disconnect_method(conn, pkt);
-
-      } else {
-        conn->state = UMQTT_DISCONNECTED;
-      }
+      ret = client_process_disconnect_pkt(conn, pkt);
       break;
 
     default:
@@ -560,28 +496,29 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
     uint8_t retain, uint8_t qos, uint8_t dup, size_t topic_len, uint8_t
     *payload, size_t pay_len, uint8_t flags) {
 
+  umqtt_ret ret = UMQTT_SUCCESS;
   struct mqtt_packet *pkt = NULL;
 
   LOG_DEBUG_FN("fn: broker_publish");
 
-  pkt = construct_default_packet(PUBLISH, payload,
-      pay_len);
+  pkt = construct_default_packet(PUBLISH, payload, pay_len);
   if (!pkt) {
     LOG_ERROR("PUBLISH packet failed");
     return UMQTT_ERROR;
   }
 
-  if (set_publish_fixed_flags(pkt, retain, qos, dup)) {
+  ret = set_publish_fixed_flags(pkt, retain, qos, dup);
+  if (ret) {
     LOG_ERROR("Failed to set packet flags");
-    return UMQTT_ERROR;
+    return ret;
   }
 
-  if (conn->send_method(conn, pkt)) {
+  ret = broker_send_packet(conn, pkt);
+  if (ret) {
     LOG_ERROR("Failed to send packet");
-    return UMQTT_ERROR;
   }
 
-  return UMQTT_SUCCESS;
+  return ret;
 }
 
 /**
@@ -613,9 +550,9 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
   /* register subscription */
   conn->subs[conn->sub_count] = pkt;
 
-  ret = conn->send_method(conn, pkt);
+  ret = broker_send_packet(conn, pkt);
   if (ret) {
-    LOG_ERROR("Broker connection failed");
+    LOG_ERROR("Failed to send packet");
     free_packet(pkt);
     return ret;
   }
@@ -629,7 +566,7 @@ umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
   count = 0;
 
   do {
-    ret = conn->receive_method(conn, pkt_resp);
+    ret = broker_receive_packet(conn, pkt_resp);
     if (ret) {
       LOG_ERROR("Subscribe Response Packet Failed");
       free_packet(pkt_resp);
@@ -665,7 +602,7 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
       return UMQTT_DISCONNECT_ERROR;
     }
 
-    ret = conn->send_method(conn, pkt);
+    ret = broker_send_packet(conn, pkt);
     if (ret) {
       free_packet(pkt);
       return UMQTT_PACKET_ERROR;
@@ -674,25 +611,14 @@ umqtt_ret broker_disconnect(struct broker_conn *conn) {
     free_packet(pkt);
   }
 
+#if !MICRO_CLIENT
   if (conn->disconnect_method(conn)) {
     return UMQTT_DISCONNECT_ERROR;
   }
+#endif
 
   conn->state = UMQTT_DISCONNECTED;
   return UMQTT_SUCCESS;
-}
-
-/**
- * \brief Function to free memory allocated to struct mqtt_packet.
- * \param pkt The packet to free.
- */
-void free_process_methods(struct mqtt_process_methods *proc) {
-  LOG_DEBUG_FN("fn: free_process_methods");
-  if (proc) {
-    free(proc);
-  }
-
-  return;
 }
 
 /**
@@ -702,11 +628,13 @@ void free_process_methods(struct mqtt_process_methods *proc) {
 void free_connection(struct broker_conn *conn) {
   LOG_DEBUG_FN("fn: free_connection");
 
+#if !MICRO_CLIENT
   if (conn->free_method) {
     conn->free_method(conn);
   }
 
   free_process_methods(conn->proc);
+#endif
 
   if (conn->client.clientid) {
     free(conn->client.clientid);
@@ -725,4 +653,334 @@ void free_connection(struct broker_conn *conn) {
   }
 
   return;
+}
+
+/**
+ * \brief Function to process received CONNECT Packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_connect_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+#if !MICRO_CLIENT
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  if (conn->proc && conn->proc->connect_method) {
+    ret = conn->proc->connect_method(conn, pkt);
+
+  } else {
+    ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+
+  return ret;
+#else
+  /* MICRO_CLIENT */
+  return UMQTT_PKT_NOT_SUPPORTED;
+#endif
+}
+
+/**
+ * \brief Function to process received CONNACK packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_connack_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  /* Process response */
+  if (pkt->variable->connack.connect_ret == CONN_ACCEPTED) {
+    conn->state = UMQTT_CONNECTED;
+  } else {
+    conn->state = UMQTT_DISCONNECTED;
+    LOG_ERROR("MQTT connect failed");
+    ret = UMQTT_CONNECT_ERROR;
+  }
+
+#if !MICRO_CLIENT
+  if (!ret && conn->proc && conn->proc->connack_method) {
+    ret = conn->proc->connack_method(conn, pkt);
+
+  }
+#endif
+  return ret;
+}
+
+/**
+ * \brief Function to process received PUBLISH packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_publish_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+#if !MICRO_CLIENT
+  if (conn->proc && conn->proc->publish_method) {
+    ret = conn->proc->publish_method(conn, pkt);
+
+  }
+#endif
+  return ret;
+}
+
+/**
+ * \brief Function to process received PUBACK packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_puback_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+#if !MICRO_CLIENT
+  if (conn->proc && conn->proc->puback_method) {
+    ret = conn->proc->puback_method(conn, pkt);
+
+  } else {
+    ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+#else
+  /* should do something for MICRO_CLIENTs here */
+#endif
+  return ret;
+}
+
+/**
+ * \brief Function to process received PUBCOMP packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_pubcomp_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+#if !MICRO_CLIENT
+  if (conn->proc && conn->proc->pubcomp_method) {
+    ret = conn->proc->pubcomp_method(conn, pkt);
+
+  } else {
+    ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+#else
+  /* should do something for MICRO_CLIENTs here */
+#endif
+
+  return ret;
+}
+
+/**
+ * \brief Function to process received PUBREL packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_pubrel_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+#if !MICRO_CLIENT
+  if (conn->proc && conn->proc->pubrel_method) {
+    ret = conn->proc->pubrel_method(conn, pkt);
+
+  } else {
+    ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+#else
+  /* should do something for MICRO_CLIENTs here */
+#endif
+  return ret;
+}
+
+/**
+ * \brief Function to process received PUBREC packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_pubrec_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+#if !MICRO_CLIENT
+  if (conn->proc && conn->proc->pubrec_method) {
+    ret = conn->proc->pubrec_method(conn, pkt);
+
+  } else {
+    ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+#else
+  /* should do something for MICRO_CLIENTs here */
+#endif
+
+  return ret;
+}
+
+/**
+ * \brief Function to process received SUBSCRIBE packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_subscribe_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+#if !MICRO_CLIENT
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  if (conn->proc && conn->proc->subscribe_method) {
+    ret = conn->proc->subscribe_method(conn, pkt);
+
+  } else {
+    ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+
+  return ret;
+#else
+
+  return UMQTT_PKT_NOT_SUPPORTED;
+#endif
+}
+
+/**
+ * \brief Function to process received UNSUBSCRIBE packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_unsubscribe_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+#if !MICRO_CLIENT
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  if (conn->proc && conn->proc->unsubscribe_method) {
+    ret = conn->proc->unsubscribe_method(conn, pkt);
+
+  } else {
+    ret = UMQTT_PKT_NOT_SUPPORTED;
+  }
+
+  return ret;
+#else
+
+  return UMQTT_PKT_NOT_SUPPORTED;
+#endif
+}
+
+/**
+ * \brief Function to process received SUBACK packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_suback_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+  int i = 0;
+
+  /* process each subscribe ack */
+  for (i = 0; i < conn->sub_count; i++) {
+    if (pkt->variable->generic.pkt_id ==
+        conn->subs[i]->variable->generic.pkt_id) {
+      if (pkt->payload->data == 0x00) {
+        pkt->fixed->generic.type = SUBACK;
+      } else {
+        LOG_ERROR("bad SUBACK return: 0x%X", pkt->payload->data);
+        ret = UMQTT_CONNECT_ERROR;
+      }
+      break;
+    }
+  }
+
+#if !MICRO_CLIENT
+  if (!ret && conn->proc && conn->proc->suback_method) {
+    ret = conn->proc->suback_method(conn, pkt);
+  }
+#endif
+
+  return ret;
+}
+
+/**
+ * \brief Function to process received UNSUBACK packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_unsuback_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+#if !MICRO_CLIENT
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  if (conn->proc && conn->proc->unsuback_method) {
+    ret = conn->proc->unsuback_method(conn, pkt);
+  }
+
+  return ret;
+#else
+
+  return UMQTT_PKT_NOT_SUPPORTED;
+#endif
+}
+
+/**
+ * \brief Function to process received PINGREQ packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_pingreq_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+  struct mqtt_packet *pkt_resp = NULL;
+
+  /* send PINGRESP */
+  pkt_resp = construct_default_packet(PINGRESP, 0, 0);
+  ret = broker_send_packet(conn, pkt);
+  if (ret) {
+    LOG_ERROR("Failed to send PINGRESP packet");
+  }
+  free_packet(pkt_resp);
+
+#if !MICRO_CLIENT
+  if (!ret && conn->proc && conn->proc->pingreq_method) {
+    ret = conn->proc->pingreq_method(conn, pkt);
+  }
+#endif
+
+  return ret;
+}
+
+/**
+ * \brief Function to process received PINGRESP packet.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_pingresp_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  conn->state = UMQTT_CONNECTED;
+
+#if !MICRO_CLIENT
+  if (conn->proc && conn->proc->pingresp_method) {
+    ret = conn->proc->pingresp_method(conn, pkt);
+  }
+#endif
+
+  return ret;
+}
+
+/**
+ * \brief Function to process received DISCONNECT.
+ * \param conn The source connection.
+ * \param pkt The packet to be processed.
+ */
+umqtt_ret client_process_disconnect_pkt(struct broker_conn *conn, struct mqtt_packet *pkt) {
+
+  umqtt_ret ret = UMQTT_SUCCESS;
+
+  conn->state = UMQTT_DISCONNECTED;
+
+  /* should probably call disconnect method here */
+
+#if !MICRO_CLIENT
+  if (conn->proc && conn->proc->disconnect_method) {
+    ret = conn->proc->disconnect_method(conn, pkt);
+  }
+#endif
+
+  return ret;
 }

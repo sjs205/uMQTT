@@ -54,8 +54,9 @@ struct mqtt_client {
   char *password;
 };
 
+#if !MICRO_CLIENT
 /**
- * \brief Struct to store process_method overload functions 
+ * \brief Struct to store process_method overload functions
  * \param connect_method Function pointer to connect packet overload method
  * \param connack_method Function pointer to conack packet overload method
  * \param publish_method Function pointer to publish packet overload method
@@ -87,6 +88,7 @@ struct mqtt_process_methods {
   umqtt_ret (*pingresp_method)(struct broker_conn *, struct mqtt_packet *);
   umqtt_ret (*disconnect_method)(struct broker_conn *, struct mqtt_packet *);
 };
+#endif
 
 /**
  * \brief Struct to store an MQTT broker socket connection.
@@ -120,6 +122,7 @@ struct broker_conn {
   long int success_count;
   long int fail_count;
 
+#if !MICRO_CLIENT
   umqtt_ret (*connect_method)(struct broker_conn *);
   umqtt_ret (*disconnect_method)(struct broker_conn *);
 
@@ -128,20 +131,15 @@ struct broker_conn {
 
   umqtt_ret (*process_method)(struct broker_conn *, struct mqtt_packet *);
   struct mqtt_process_methods *proc;
+#endif
 
   void (*free_method)(struct broker_conn *);
 };
 
 void init_connection(struct broker_conn **conn_p);
-umqtt_ret init_process_methods(struct mqtt_process_methods **proc_p);
 
-void register_connection_methods(struct broker_conn *conn,
-    umqtt_ret (*connect_method)(struct broker_conn *),
-    umqtt_ret (*disconnect_method)(struct broker_conn *),
-    umqtt_ret (*send_method)(struct broker_conn *,  struct mqtt_packet *),
-    umqtt_ret (*receive_method)(struct broker_conn *, struct mqtt_packet *),
-    umqtt_ret (*process_method)(struct broker_conn *, struct mqtt_packet *),
-    void (*free_method)(struct broker_conn *));
+#if !MICRO_CLIENT
+umqtt_ret init_process_methods(struct mqtt_process_methods **proc_p);
 umqtt_ret register_process_methods(struct mqtt_process_methods **proc,
     umqtt_ret (*connect_method)(struct broker_conn *, struct mqtt_packet *),
     umqtt_ret (*connack_method)(struct broker_conn *, struct mqtt_packet *),
@@ -157,6 +155,16 @@ umqtt_ret register_process_methods(struct mqtt_process_methods **proc,
     umqtt_ret (*pingreq_method)(struct broker_conn *, struct mqtt_packet *),
     umqtt_ret (*pingresp_method)(struct broker_conn *, struct mqtt_packet *),
     umqtt_ret (*disconnect_method)(struct broker_conn *, struct mqtt_packet *));
+void free_process_methods(struct mqtt_process_methods *proc);
+void register_connection_methods(struct broker_conn *conn,
+    umqtt_ret (*connect_method)(struct broker_conn *),
+    umqtt_ret (*disconnect_method)(struct broker_conn *),
+    umqtt_ret (*send_method)(struct broker_conn *,  struct mqtt_packet *),
+    umqtt_ret (*receive_method)(struct broker_conn *, struct mqtt_packet *),
+    umqtt_ret (*process_method)(struct broker_conn *, struct mqtt_packet *),
+    void (*free_method)(struct broker_conn *));
+#endif
+
 umqtt_ret broker_set_clientid(struct broker_conn *conn, const char *clientid,
     size_t len);
 umqtt_ret broker_send_packet(struct broker_conn *conn, struct mqtt_packet *pkt);
@@ -169,6 +177,20 @@ umqtt_ret broker_publish(struct broker_conn *conn, const char *topic,
 umqtt_ret broker_subscribe(struct broker_conn *conn, const char *topic,
     size_t topic_len);
 umqtt_ret broker_disconnect(struct broker_conn *conn);
-void free_process_methods(struct mqtt_process_methods *proc);
 void free_connection(struct broker_conn *conn);
+
+umqtt_ret client_process_connect_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_connack_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_publish_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_puback_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_pubcomp_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_pubrel_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_pubrec_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_subscribe_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_unsubscribe_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_suback_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_unsuback_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_pingreq_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_pingresp_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
+umqtt_ret client_process_disconnect_pkt(struct broker_conn *conn, struct mqtt_packet *pkt);
 #endif          /* UMQTT_CLIENT__H */
