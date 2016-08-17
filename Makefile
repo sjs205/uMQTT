@@ -6,6 +6,9 @@ SRCDIR = $(CURDIR)/src
 INCDIR = $(SRCDIR)/inc
 AVRDIR = $(SRCDIR)/avr
 
+CLEAN=$(BINDIR) $(LIBDIR) $(AVRDIR)/*.{elf,eep,lss,map,o,lst,sym,hex}
+CLEAN+=uMQTT_contiki.c uMQTT_contiki.h
+
 MKDIR_P = mkdir -p
 	
 export
@@ -48,6 +51,11 @@ sdcc:
 debug: CFLAGS += -DDEBUG -g -O0
 debug: all
 
-.PHONY: clean
+.PHONY: clean contiki
+
+contiki:
+	cp src/inc/uMQTT.h uMQTT_contiki.h
+	sed 's;uMQTT.h;uMQTT_contiki.h;' src/uMQTT.c > uMQTT_contiki.c
+
 clean:
-	rm -rf $(BINDIR) $(LIBDIR) $(AVRDIR)/*.{elf,eep,lss,map,o,lst,sym,hex}
+	rm -rf $(CLEAN)
