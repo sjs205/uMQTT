@@ -255,7 +255,7 @@ int main(int argc, char **argv) {
 
   struct linux_broker_socket *skt = '\0';
   if ((ret = broker_connect(conn))) {
-    LOG_ERROR("Initialising socket connection");
+    LOG_ERROR("Connecting to broker");
     free_connection(conn);
     return ret;
   } else {
