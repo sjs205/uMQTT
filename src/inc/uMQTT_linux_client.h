@@ -36,19 +36,22 @@
  * \param ip The ip address of the broker.
  * \param port The port with which to bind to.
  * \param sockfd The socket file descriptor of a connection instance.
+ * \param type The type of socket, SOCK_STREAM or SOCK_DGRAM.
+               NOTE: SOCK_STREAM is the default, but this can be overridden.
  * \param serv_addr struct holding the address of the broker.
- * \param conn_state Current connection state.
  */
 struct linux_broker_socket {
   char ip[16];
   int port;
   int sockfd;
+  int type;
   struct sockaddr_in serv_addr;
 };
 
 void init_linux_socket_connection(struct broker_conn **conn_p, char *ip, unsigned int ip_len,
     unsigned int port);
 umqtt_ret linux_socket_connect(struct broker_conn *conn);
+umqtt_ret linux_socket_bind(struct broker_conn *conn);
 umqtt_ret linux_socket_disconnect(struct broker_conn *conn);
 umqtt_ret send_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt);
 umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt);

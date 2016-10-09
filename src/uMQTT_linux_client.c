@@ -63,6 +63,9 @@ void init_linux_socket_connection(struct broker_conn **conn_p, char *ip,
   skt->serv_addr.sin_port = htons(skt->port);
   memcpy(skt->ip, ip, ip_len);
 
+  /* Set the socket type to TCP - can be overridden */
+  skt->type = SOCK_STREAM;
+
   register_connection_methods(conn, linux_socket_connect,
       linux_socket_disconnect, send_socket_packet, read_socket_packet,
       broker_process_packet, free_linux_socket);
@@ -83,7 +86,7 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
 
   struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
 
-  if ((skt->sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+  if ((skt->sockfd = socket(AF_INET, skt->type, 0)) < 0)
   {
     LOG_ERROR("Could not create socket");
     return UMQTT_CONNECT_ERROR;
@@ -101,6 +104,40 @@ umqtt_ret linux_socket_connect(struct broker_conn *conn) {
         sizeof(skt->serv_addr)) == -1)
   {
     LOG_ERROR("Connect Failed: %s", strerror(errno));
+    return UMQTT_CONNECT_ERROR;
+  }
+
+  return UMQTT_SUCCESS;
+}
+
+/**
+ * \brief Function to bind to an address.
+ * \param conn Pointer to the broker_conn struct.
+ * \return mqtt_ret
+ */
+umqtt_ret linux_socket_bind(struct broker_conn *conn) {
+  LOG_DEBUG_FN("fn: linux_socket_bind");
+
+  struct linux_broker_socket *skt = (struct linux_broker_socket *)conn->context;
+
+  if ((skt->sockfd = socket(AF_INET, skt->type, 0)) < 0)
+  {
+    LOG_ERROR("Could not create socket");
+    return UMQTT_CONNECT_ERROR;
+  }
+
+  /* convert ip address to binary */
+  if (inet_pton(skt->serv_addr.sin_family, skt->ip,
+        &skt->serv_addr.sin_addr) <= 0)
+  {
+    LOG_ERROR("inet_pton error occured");
+    return UMQTT_CONNECT_ERROR;
+  }
+
+  if (bind(skt->sockfd, (struct sockaddr *)&skt->serv_addr,
+        sizeof(skt->serv_addr)) == -1)
+  {
+    LOG_ERROR("Bind Failed: %s", strerror(errno));
     return UMQTT_CONNECT_ERROR;
   }
 
@@ -171,8 +208,8 @@ umqtt_ret read_socket_packet(struct broker_conn *conn, struct mqtt_packet *pkt) 
         MSG_PEEK);
   } while (len < MQTT_MIN_PKT_LEN && len > 0);
 
-  if (len == 0) {
-    /* Possibly disconnected from broker */
+  if (len == -1) {
+    LOG_ERROR("Reading from socket %s", strerror(errno));
     ret = UMQTT_RECEIVE_ERROR;
     goto exit;
   }

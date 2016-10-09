@@ -10,6 +10,13 @@ UMQTT_SUB_OBJS = $(OBJDIR)/uMQTT.o \
                  $(OBJDIR)/uMQTT_helper.o \
                  $(OBJDIR)/log.o
 
+UMQTT_UDP_RLY_OBJS = $(OBJDIR)/uMQTT.o \
+                 $(OBJDIR)/uMQTT_client.o \
+                 $(OBJDIR)/uMQTT_linux_client.o \
+                 $(OBJDIR)/uMQTT_helper.o \
+                 $(OBJDIR)/log.o
+
+
 UMQTT_PRINT_OBJS = $(OBJDIR)/uMQTT.o $(OBJDIR)/uMQTT_helper.o \
                  $(OBJDIR)/log.o
 
@@ -20,6 +27,7 @@ apps: uMQTT_pub
 apps: uMQTT_sub
 apps: uMQTT_print_packet
 apps: uMQTT_gen_pkt
+apps: uMQTT_UDP_relay
 
 uMQTT_pub:
 	$(CC) $(CFLAGS) $@.c -o $(OBJDIR)/$@.o
@@ -36,3 +44,7 @@ uMQTT_print_packet:
 uMQTT_gen_pkt:
 	$(CC) $(CFLAGS) $@.c -o $(OBJDIR)/$@.o
 	$(CC) $(LDFLAGS) $(UMQTT_GEN_PKT_OBJS) $(OBJDIR)/$@.o -o $(BINDIR)/$@
+
+uMQTT_UDP_relay:
+	$(CC) $(CFLAGS) $@.c -o $(OBJDIR)/$@.o
+	$(CC) $(LDFLAGS) $(UMQTT_UDP_RLY_OBJS) $(OBJDIR)/$@.o -o $(BINDIR)/$@
