@@ -1,5 +1,6 @@
 SRCDIR = $(CURDIR)/src
 BINDIR = $(CURDIR)/bin
+DOCDIR = $(CURDIR)/docs
 OBJDIR = $(BINDIR)/obj
 LIBDIR = $(CURDIR)/lib
 SRCDIR = $(CURDIR)/src
@@ -7,7 +8,7 @@ INCDIR = $(SRCDIR)/inc
 AVRDIR = $(SRCDIR)/avr
 
 MKDIR_P = mkdir -p
-	
+
 export
 
 PLATFORM = x86
@@ -45,6 +46,10 @@ tests: setup srcs
 debug: CFLAGS += -DDEBUG -g -O0
 debug: all
 
-.PHONY: clean
+.PHONY: clean docs
+docs:
+	doxygen $(DOCDIR)/doxygen.cfg.in
+
 clean:
-	rm -rf $(BINDIR) $(LIBDIR) $(AVRDIR)/*.{elf,eep,lss,map,o,lst,sym,hex}
+	rm -rf $(BINDIR) $(LIBDIR) $(AVRDIR)/*.{elf,eep,lss,map,o,lst,sym,hex} \
+         $(DOCDIR)/docs $(DOCDIR)/html
