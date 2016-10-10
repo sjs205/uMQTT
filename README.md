@@ -28,7 +28,7 @@ uMQTT provides two Linux client applications:
 
 #### uMQTT_pub
 
-uMQTT_pub is an application to publish messages to a given topic to an MQTT broker.
+Application to publish messages to a given topic to an MQTT broker.
 
 The following command provides further information.
 ```
@@ -37,7 +37,7 @@ bin/uMQTT_pub --help
 
 #### uMQTT_sub
 
-uMQTT_sub is an application to subscribe to topics on an MQTT broker.
+Application to subscribe to topics on an MQTT broker.
 
 
 The following command provides further information.
@@ -94,7 +94,7 @@ On Linux based platforms, building the uMQTT tool kit is as simple as typing ```
 ```make debug``` builds the uMQTT tool kit with debug included. This also enables debug printing.
 
 ### Build doxygen documentation
-```make debug``` builds the Doxygen documentation, which can be viewed by pointing a browser at ```docs/html/index.html```.
+```make docs``` builds the Doxygen documentation, which can be viewed by pointing a browser at ```docs/html/index.html```.
 
 ## Supported platforms
 The following platforms have been tested:
@@ -102,3 +102,7 @@ The following platforms have been tested:
 * Linux
 * Contiki
 * AVR
+
+## Limitations
+
+Currently, uMQTT does not support QoS levels greater than 0, and excrypted authentication, although, support for these features are underway.
