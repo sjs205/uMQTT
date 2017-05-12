@@ -96,7 +96,7 @@ int test_compare_packets(struct mqtt_packet *pkt1, struct mqtt_packet *pkt2) {
   int i;
   int delta = pkt1->len - pkt2->len;
 
-  if (pkt1->fixed->generic.type != pkt1->fixed->generic.type) {
+  if (pkt1->fixed->generic.type != pkt2->fixed->generic.type) {
     log_std(LOG_ERROR, "Cannot compare packets of different type");
     return delta;
   }
