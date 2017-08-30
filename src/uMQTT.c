@@ -945,11 +945,11 @@ uint16_t utf8_enc_str_size(struct utf8_enc_str *utf8) {
 void free_packet(struct mqtt_packet *pkt) {
   LOG_DEBUG_FN("fn: free_packet");
 
-  if (pkt->raw.buf) {
-    free(pkt->raw.buf);
-  }
-
   if (pkt) {
+    if (pkt->raw.buf) {
+      free(pkt->raw.buf);
+    }
+
     free(pkt);
   }
 
